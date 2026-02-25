@@ -1,0 +1,89 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(74, 229, 197, 0.1), transparent 34%),
+    radial-gradient(circle at 78% 26%, rgba(106, 200, 255, 0.12), transparent 34%),
+    linear-gradient(155deg, #031018 0%, #04131b 44%, #062233 100%);
+}
+
+main,
+.hero,
+.hero-visual {
+  width: 100%;
+  height: 100%;
+}
+
+.hero {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+}
+
+.hero-visual {
+  position: relative;
+  max-width: 1500px;
+  border-radius: 24px;
+}
+
+#earth-canvas,
+.hero-fallback {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 24px;
+}
+
+#earth-canvas {
+  border: 1px solid rgba(116, 197, 193, 0.2);
+  background: radial-gradient(circle at 50% 50%, rgba(10, 28, 36, 0.4), rgba(4, 14, 20, 0.08));
+  cursor: grab;
+  touch-action: none;
+}
+
+#earth-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.hero-fallback {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgba(116, 197, 193, 0.18);
+  transition: opacity 240ms ease;
+}
+
+.hero-visual.fallback-active .hero-fallback {
+  opacity: 1;
+}
+
+.hero-visual.fallback-active #earth-canvas {
+  opacity: 0;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    padding: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0s !important;
+  }
+}
