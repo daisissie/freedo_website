@@ -377,43 +377,52 @@
     </div>
 
     <script type="module">
-        import { initEarthHero } from './src/earthScene.js';
+        const earthVisual = document.querySelector('#earth-canvas')?.parentElement;
 
-        initEarthHero({
-            heroSelector: '#earth-background',
-            canvasSelector: '#earth-canvas',
-            fallbackSelector: '#hero-fallback',
-            disintegrateTriggerSelector: '#manifesto',
-            reassembleTriggerSelector: '#cta-section'
-        });
+        import('./src/earthScene.js')
+            .then(({ initEarthHero }) => {
+                initEarthHero({
+                    heroSelector: '#earth-background',
+                    canvasSelector: '#earth-canvas',
+                    fallbackSelector: '#hero-fallback',
+                    disintegrateTriggerSelector: '#manifesto',
+                    reassembleTriggerSelector: '#cta-section'
+                });
+            })
+            .catch((error) => {
+                console.error('Failed to load earth scene module:', error);
+                earthVisual?.classList.add('fallback-active');
+            });
     </script>
     <script>
-        // Initialize GSAP
-        gsap.registerPlugin(ScrollTrigger);
+        // Initialize GSAP if available
+        if (window.gsap && window.ScrollTrigger) {
+            gsap.registerPlugin(ScrollTrigger);
 
-        // Scroll animations
-        const revealElements = document.querySelectorAll('.reveal-up');
+            // Scroll animations
+            const revealElements = document.querySelectorAll('.reveal-up');
 
-        revealElements.forEach((element) => {
-            gsap.fromTo(element,
-                {
-                    opacity: 0,
-                    y: 50
-                },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 1,
-                    ease: "power3.out",
-                    scrollTrigger: {
-                        trigger: element,
-                        start: "top 85%",
-                        toggleActions: "play none none reverse"
+            revealElements.forEach((element) => {
+                gsap.fromTo(element,
+                    {
+                        opacity: 0,
+                        y: 50
                     },
-                    delay: element.style.transitionDelay ? parseFloat(element.style.transitionDelay) : 0
-                }
-            );
-        });
+                    {
+                        opacity: 1,
+                        y: 0,
+                        duration: 1,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: element,
+                            start: "top 85%",
+                            toggleActions: "play none none reverse"
+                        },
+                        delay: element.style.transitionDelay ? parseFloat(element.style.transitionDelay) : 0
+                    }
+                );
+            });
+        }
 
         // Navbar glass effect on scroll
         const navbar = document.getElementById('navbar');
