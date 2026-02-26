@@ -2,88 +2,148 @@
   box-sizing: border-box;
 }
 
-html,
-body {
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-body {
-  background:
+:root {
+  --bg-base: #050505;
+  --scrollbar-thumb: #333;
+  --scrollbar-thumb-hover: #555;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --earth-gradient:
     radial-gradient(circle at 18% 16%, rgba(74, 229, 197, 0.1), transparent 34%),
     radial-gradient(circle at 78% 26%, rgba(106, 200, 255, 0.12), transparent 34%),
     linear-gradient(155deg, #031018 0%, #04131b 44%, #062233 100%);
 }
 
-main,
-.hero,
-.hero-visual {
+/* Base */
+body {
+  background-color: var(--bg-base);
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Text & surface utilities */
+.gradient-text {
+  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+}
+
+/* Layout layers */
+#canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+#page-content {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#page-content :is(a, button, [role="button"], input, select, textarea, label, .feature-card) {
+  pointer-events: auto;
+}
+
+#earth-background,
+#canvas-container .earth-background-visual,
+#earth-canvas,
+.earth-background-fallback {
   width: 100%;
   height: 100%;
 }
 
-.hero {
+#earth-background {
   display: grid;
   place-items: center;
-  padding: 14px;
 }
 
-.hero-visual {
+#canvas-container .earth-background-visual {
   position: relative;
-  max-width: 1500px;
-  border-radius: 24px;
 }
 
 #earth-canvas,
-.hero-fallback {
-  width: 100%;
-  height: 100%;
+.earth-background-fallback {
   display: block;
-  border-radius: 24px;
+  border: 0;
 }
 
 #earth-canvas {
-  border: 1px solid rgba(116, 197, 193, 0.2);
-  background: radial-gradient(circle at 50% 50%, rgba(10, 28, 36, 0.4), rgba(4, 14, 20, 0.08));
+  background: var(--earth-gradient);
+  touch-action: pan-y;
   cursor: grab;
-  touch-action: none;
 }
 
 #earth-canvas.is-dragging {
   cursor: grabbing;
 }
 
-.hero-fallback {
+.earth-background-fallback {
   position: absolute;
   inset: 0;
   object-fit: cover;
   opacity: 0;
   pointer-events: none;
-  border: 1px solid rgba(116, 197, 193, 0.18);
   transition: opacity 240ms ease;
 }
 
-.hero-visual.fallback-active .hero-fallback {
+#canvas-container .fallback-active .earth-background-fallback {
   opacity: 1;
 }
 
-.hero-visual.fallback-active #earth-canvas {
+#canvas-container .fallback-active #earth-canvas {
   opacity: 0;
 }
 
-@media (max-width: 900px) {
-  .hero {
-    padding: 8px;
-  }
+/* Motion & interaction */
+.magnetic-btn {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition-duration: 0s !important;
-  }
+.reveal-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(255, 255, 255, 0.05);
 }

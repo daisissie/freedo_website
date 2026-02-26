@@ -4,6 +4,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 const SPHERE_RADIUS = 1;
+const MAX_DISPERSE = 0.6;
+const CTA_REASSEMBLE_RATIO = 0.96;
 
 // Natural Earth 110m land polygons – small (~80 KB), accurate outlines
 const GEOJSON_URL =
@@ -21,6 +23,15 @@ function isWebGLAvailable() {
   } catch {
     return false;
   }
+}
+
+function getElementExposureRatio(element) {
+  if (!element) return 0;
+  const rect = element.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1;
+  const visible = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
+  const height = Math.max(1, rect.height);
+  return THREE.MathUtils.clamp(visible / height, 0, 1);
 }
 
 // ─── Procedural blob fallback (used only if GeoJSON fetch fails) ──────────────
@@ -151,6 +162,8 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
   const latitude  = new Float32Array(count);
   const landAttr  = new Float32Array(count);   // 0=ocean, 1=land
   const coastAttr = new Float32Array(count);   // 0..1 coast proximity
+  const explodeDir = new Float32Array(count * 3);
+  const explodePow = new Float32Array(count);
 
   let i = 0, attempts = 0;
   const maxA = count * 60;
@@ -176,6 +189,20 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
     positions[i * 3]     = xp * SPHERE_RADIUS;
     positions[i * 3 + 1] = u  * SPHERE_RADIUS;
     positions[i * 3 + 2] = zp * SPHERE_RADIUS;
+
+    const driftX = Math.random() * 2 - 1;
+    const driftY = Math.random() * 2 - 1;
+    const driftZ = Math.random() * 2 - 1;
+    const driftLen = Math.sqrt(driftX * driftX + driftY * driftY + driftZ * driftZ) || 1;
+    const dirX = xp * 0.72 + (driftX / driftLen) * 0.28;
+    const dirY = u * 0.72 + (driftY / driftLen) * 0.28;
+    const dirZ = zp * 0.72 + (driftZ / driftLen) * 0.28;
+    const dirLen = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ) || 1;
+    explodeDir[i * 3] = dirX / dirLen;
+    explodeDir[i * 3 + 1] = dirY / dirLen;
+    explodeDir[i * 3 + 2] = dirZ / dirLen;
+    explodePow[i] = THREE.MathUtils.lerp(0.95, 1.85, Math.random());
+
     phase[i]     = Math.random();
     seed[i]      = Math.random();
     latitude[i]  = u;
@@ -188,9 +215,25 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
   while (i < count) {
     const u = Math.random() * 2 - 1, theta = Math.random() * Math.PI * 2;
     const r = Math.sqrt(1 - u * u);
-    positions[i * 3]     = r * Math.cos(theta) * SPHERE_RADIUS;
+    const xp = r * Math.cos(theta);
+    const zp = r * Math.sin(theta);
+    positions[i * 3]     = xp * SPHERE_RADIUS;
     positions[i * 3 + 1] = u * SPHERE_RADIUS;
-    positions[i * 3 + 2] = r * Math.sin(theta) * SPHERE_RADIUS;
+    positions[i * 3 + 2] = zp * SPHERE_RADIUS;
+
+    const driftX = Math.random() * 2 - 1;
+    const driftY = Math.random() * 2 - 1;
+    const driftZ = Math.random() * 2 - 1;
+    const driftLen = Math.sqrt(driftX * driftX + driftY * driftY + driftZ * driftZ) || 1;
+    const dirX = xp * 0.72 + (driftX / driftLen) * 0.28;
+    const dirY = u * 0.72 + (driftY / driftLen) * 0.28;
+    const dirZ = zp * 0.72 + (driftZ / driftLen) * 0.28;
+    const dirLen = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ) || 1;
+    explodeDir[i * 3] = dirX / dirLen;
+    explodeDir[i * 3 + 1] = dirY / dirLen;
+    explodeDir[i * 3 + 2] = dirZ / dirLen;
+    explodePow[i] = THREE.MathUtils.lerp(0.95, 1.85, Math.random());
+
     phase[i] = Math.random();
     seed[i]  = Math.random();
     latitude[i] = u;
@@ -204,6 +247,8 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
   geometry.setAttribute('aLatitude', new THREE.BufferAttribute(latitude, 1));
   geometry.setAttribute('aLand',     new THREE.BufferAttribute(landAttr, 1));
   geometry.setAttribute('aCoast',    new THREE.BufferAttribute(coastAttr, 1));
+  geometry.setAttribute('aExplodeDir', new THREE.BufferAttribute(explodeDir, 3));
+  geometry.setAttribute('aExplodePow', new THREE.BufferAttribute(explodePow, 1));
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -213,6 +258,7 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
       uMousePoint:    { value: new THREE.Vector3(9, 9, 9) },
       uMouseStrength: { value: 0 },
       uReduceMotion:  { value: 0 },
+      uDisperse:      { value: 0 },
     },
     transparent: true,
     depthWrite: true,
@@ -224,12 +270,15 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
       uniform vec3  uMousePoint;
       uniform float uMouseStrength;
       uniform float uReduceMotion;
+      uniform float uDisperse;
 
       attribute float aPhase;
       attribute float aSeed;
       attribute float aLatitude;
       attribute float aLand;
       attribute float aCoast;
+      attribute vec3  aExplodeDir;
+      attribute float aExplodePow;
 
       varying float vAlpha;
       varying float vRingGlow;
@@ -243,13 +292,26 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
         float noiseFlow = sin(aSeed * 10.0 + uTime * 0.65) * 0.005;
         pos += normalize(position) * (breath + noiseFlow * (1.0 - uReduceMotion));
 
+        float disperse = clamp(uDisperse, 0.0, 1.0);
+        float motionScale = mix(0.12, 1.0, 1.0 - uReduceMotion);
+        float travel = (0.45 + aExplodePow * 1.85) * disperse;
+        float swirlPhase = uTime * (1.8 + aSeed * 2.7) + aPhase * 6.2831;
+        vec3 swirl = vec3(
+          sin(swirlPhase * 1.17),
+          cos(swirlPhase * 0.93),
+          sin(swirlPhase * 1.41)
+        ) * 0.03 * disperse * (1.0 - uReduceMotion);
+        pos += aExplodeDir * travel * motionScale + swirl;
+
         float ringDist = abs(aLatitude - uRingLat);
-        float ringGlow = (1.0 - smoothstep(0.0, 0.055, ringDist)) * (1.0 - uReduceMotion);
+        float ringGlow = (1.0 - smoothstep(0.0, 0.055, ringDist))
+          * (1.0 - uReduceMotion)
+          * (1.0 - disperse);
 
         float probe = 0.0;
         if (uMouseStrength > 0.0001) {
           float d = distance(pos, uMousePoint);
-          probe = exp(-d * 8.0) * uMouseStrength;
+          probe = exp(-d * 8.0) * uMouseStrength * (1.0 - disperse);
           pos += normalize(position) * probe * 0.12;
         }
 
@@ -259,8 +321,9 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
         float persp      = 8.5 / -mvPosition.z;
         float jitter     = mix(0.82, 1.15, aSeed);
         float coastBoost = aCoast * 0.35;
+        float dissolve   = 1.0 - disperse * (0.62 + aSeed * 0.38);
         gl_PointSize = max(0.5, uPointSize * persp * jitter *
-          (0.92 + aLand * 0.18 + coastBoost + ringGlow * 0.22 + probe * 1.7));
+          (0.92 + aLand * 0.18 + coastBoost + ringGlow * 0.22 + probe * 1.7) * max(0.08, dissolve));
 
         vRingGlow = ringGlow;
         vProbe    = probe;
@@ -269,10 +332,12 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
 
         // Keep baseline brightness stable across rotation.
         float baseBright = 0.56 + aLand * 0.04;
+        float dissolveAlpha = 1.0 - disperse * (0.72 + aSeed * 0.28);
         vAlpha = baseBright
                + aCoast  * 0.14
                + ringGlow * 0.1
                + probe   * 0.32;
+        vAlpha *= max(0.0, dissolveAlpha);
       }
     `,
     fragmentShader: `
@@ -428,11 +493,23 @@ function buildDriftAura(count) {
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
-export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }) {
+export function initEarthHero({
+  heroSelector,
+  canvasSelector,
+  fallbackSelector,
+  disintegrateTriggerSelector,
+  reassembleTriggerSelector,
+}) {
   const hero     = document.querySelector(heroSelector);
   const canvas   = document.querySelector(canvasSelector);
   const fallback = document.querySelector(fallbackSelector);
   const visual   = canvas?.parentElement;
+  const disintegrateTrigger = disintegrateTriggerSelector
+    ? document.querySelector(disintegrateTriggerSelector)
+    : null;
+  const reassembleTrigger = reassembleTriggerSelector
+    ? document.querySelector(reassembleTriggerSelector)
+    : null;
 
   if (!hero || !canvas || !fallback || !visual) return;
   if (!isWebGLAvailable()) { visual.classList.add('fallback-active'); return; }
@@ -478,6 +555,7 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     nu.uMousePoint.value.copy(pu.uMousePoint.value);
     nu.uMouseStrength.value = pu.uMouseStrength.value;
     nu.uReduceMotion.value  = pu.uReduceMotion.value;
+    nu.uDisperse.value      = pu.uDisperse.value;
     globeGroup.remove(points);
     points.geometry.dispose();
     points.material.dispose();
@@ -567,6 +645,35 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
   let isDragging = false, dragId = -1, lastX = 0, lastY = 0;
   let targetRotX = 0, targetRotY = 0, smoothRotX = 0, smoothRotY = 0;
   let inertX = 0, inertY = 0;
+  let disperse = 0, targetDisperse = 0;
+  let tighten = 0, targetTighten = 0;
+  let scrollDisperseActive = false;
+
+  function disintegrationInFlight() {
+    return Math.abs(targetDisperse - disperse) > 0.001;
+  }
+
+  function shouldRunLoop() {
+    return !document.hidden && (heroVisible || scrollDisperseActive || disintegrationInFlight());
+  }
+
+  function interactionLocked() {
+    return targetDisperse > 0.001 || targetTighten > 0.001;
+  }
+
+  function cancelDragInteraction() {
+    if (!isDragging) {
+      canvas.classList.remove('is-dragging');
+      return;
+    }
+    isDragging = false;
+    canvas.classList.remove('is-dragging');
+    if (dragId !== -1 && canvas.hasPointerCapture(dragId)) {
+      canvas.releasePointerCapture(dragId);
+    }
+    dragId = -1;
+    inertX = inertY = 0;
+  }
 
   function updateSizes() {
     const w = Math.max(1, visual.clientWidth);
@@ -579,10 +686,75 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     composer.setPixelRatio(isMobileLike ? dpr * 0.82 : dpr);
     composer.setSize(w, h);
     points.material.uniforms.uPointSize.value = w < 500 ? 1.35 : 1.0;
+    points.material.uniforms.uDisperse.value = disperse;
+  }
+
+  function updateDisperseFromScroll() {
+    if (!disintegrateTrigger) {
+      targetDisperse = 0;
+      targetTighten = 0;
+      scrollDisperseActive = false;
+      canvas.style.cursor = '';
+      return;
+    }
+
+    const manifestoExposure = getElementExposureRatio(disintegrateTrigger);
+    if (!reassembleTrigger) {
+      targetTighten = manifestoExposure;
+      targetDisperse = THREE.MathUtils.clamp(manifestoExposure, 0, 1) * MAX_DISPERSE;
+      scrollDisperseActive = interactionLocked();
+      if (scrollDisperseActive) {
+        targetMouse = 0;
+        cancelDragInteraction();
+      }
+      canvas.style.cursor = scrollDisperseActive ? 'default' : '';
+      return;
+    }
+
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1;
+
+    const manifestoRect = disintegrateTrigger.getBoundingClientRect();
+    const manifestoTop = scrollY + manifestoRect.top;
+    const manifestoHeight = Math.max(1, manifestoRect.height);
+    const ctaRect = reassembleTrigger.getBoundingClientRect();
+    const ctaTop = scrollY + ctaRect.top;
+
+    // Stage A: manifesto enters viewport -> dispersal 0 -> 1
+    const disperseStartY = manifestoTop - viewportHeight;
+    const dispersePeakYRaw = manifestoTop + manifestoHeight - viewportHeight;
+    const dispersePeakY = Math.max(disperseStartY + 1, dispersePeakYRaw);
+
+    // Stage B: continue scrolling down -> only partially reassemble by CTA
+    const reassembleEndY = Math.max(dispersePeakY + 1, ctaTop);
+
+    if (scrollY <= dispersePeakY) {
+      targetDisperse = manifestoExposure;
+      targetTighten = manifestoExposure;
+    } else {
+      const backProgress = THREE.MathUtils.clamp(
+        (scrollY - dispersePeakY) / (reassembleEndY - dispersePeakY),
+        0,
+        1
+      );
+      targetDisperse = 1 - backProgress * CTA_REASSEMBLE_RATIO;
+      // After manifesto passes, restore globe scale/position progressively with scroll.
+      targetTighten = 1 - backProgress;
+    }
+
+    targetDisperse = THREE.MathUtils.clamp(targetDisperse, 0, 1) * MAX_DISPERSE;
+    targetTighten = THREE.MathUtils.clamp(targetTighten, 0, 1);
+    scrollDisperseActive = interactionLocked();
+    if (scrollDisperseActive) {
+      targetMouse = 0;
+      cancelDragInteraction();
+    }
+    canvas.style.cursor = scrollDisperseActive ? 'default' : '';
   }
 
   function handlePointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (interactionLocked()) return;
     isDragging = true; dragId = e.pointerId;
     lastX = e.clientX; lastY = e.clientY;
     inertX = inertY = 0;
@@ -596,6 +768,12 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
   }
   function handlePointerMove(e) {
+    if (reducedMotion.matches || interactionLocked()) {
+      targetMouse = 0;
+      cancelDragInteraction();
+      return;
+    }
+
     if (isDragging && e.pointerId === dragId) {
       const dx = e.clientX - lastX, dy = e.clientY - lastY;
       lastX = e.clientX; lastY = e.clientY;
@@ -605,7 +783,6 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
       targetRotX = THREE.MathUtils.clamp(targetRotX, -0.65, 0.65);
       inertY = dx * spd; inertX = dy * spd;
     }
-    if (reducedMotion.matches) return;
     const rect = canvas.getBoundingClientRect();
     pointer.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
     pointer.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
@@ -628,8 +805,12 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     if (ts - lastFrame < 1000 / fpsCap) return;
     lastFrame = ts;
 
+    updateDisperseFromScroll();
     const t       = ts * 0.001;
     const noMotion = reducedMotion.matches ? 1 : 0;
+    disperse = targetDisperse;
+    tighten = targetTighten;
+    const intact = 1 - disperse;
 
     driftAura.material.uniforms.uTime.value = reducedMotion.matches ? t * 0.2 : t;
     if (!reducedMotion.matches) {
@@ -638,25 +819,36 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     }
 
     if (!isDragging) {
-      targetRotY += reducedMotion.matches ? 0.00045 : 0.00085;
+      targetRotY += (reducedMotion.matches ? 0.00045 : 0.00085) * (0.42 + intact * 0.58);
       targetRotX += inertX; inertX *= 0.93;
       targetRotY += inertY; inertY *= 0.93;
       targetRotX = THREE.MathUtils.clamp(targetRotX, -0.65, 0.65);
     }
     smoothRotX += (targetRotX - smoothRotX) * 0.12;
     smoothRotY += (targetRotY - smoothRotY) * 0.12;
+
+    const tightenScale = THREE.MathUtils.lerp(1, 1.3, tighten);
+    const tightenYScale = THREE.MathUtils.lerp(1, 0.86, tighten);
+    globeGroup.scale.set(tightenScale, tightenScale * tightenYScale, tightenScale);
+    globeGroup.position.y = THREE.MathUtils.lerp(0, -1.5, tighten);
+
     globeGroup.rotation.x = smoothRotX;
     globeGroup.rotation.y = smoothRotY;
-    wireframe.rotation.y -= 0.0006;
-    latitudeLines.rotation.y += 0.0009;
+
+    const auraScale = THREE.MathUtils.lerp(1, 1.12, tighten);
+    driftAura.scale.setScalar(auraScale);
+    driftAura.position.y = THREE.MathUtils.lerp(0, -0.58, tighten);
+
+    wireframe.rotation.y -= 0.0006 * (0.45 + intact * 0.55);
+    latitudeLines.rotation.y += 0.0009 * (0.45 + intact * 0.55);
 
     let ringLat = 0.18;
-    if (!reducedMotion.matches) {
+    if (!reducedMotion.matches && disperse < 0.96) {
       ringLat = Math.sin(t * 0.34) * 0.72;
       const latR = Math.sqrt(Math.max(0.04, 1 - ringLat * ringLat));
       scanRing.position.y = ringLat * SPHERE_RADIUS;
       scanRing.scale.setScalar(latR);
-      scanRing.material.opacity = 0.14 + Math.sin(t * 3.2) * 0.04;
+      scanRing.material.opacity = (0.14 + Math.sin(t * 3.2) * 0.04) * intact;
       scanRing.visible = true;
     } else {
       scanRing.visible = false;
@@ -666,13 +858,15 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     curMouse += (targetMouse - curMouse) * 0.14;
     points.material.uniforms.uTime.value          = t;
     points.material.uniforms.uRingLat.value       = ringLat;
-    points.material.uniforms.uMouseStrength.value = curMouse;
+    points.material.uniforms.uMouseStrength.value = curMouse * (1 - Math.min(1, disperse * 1.4));
     points.material.uniforms.uReduceMotion.value  = noMotion;
+    points.material.uniforms.uDisperse.value      = disperse;
 
     const bloomBase  = reducedMotion.matches ? 0.02 : isMobileLike ? 0.06 : 0.10;
-    bloomPass.strength = bloomBase;
+    bloomPass.strength = bloomBase * (1 - Math.min(1, disperse * 0.65));
 
     composer.render();
+    if (!shouldRunLoop()) stopLoop();
   }
 
   function startLoop() {
@@ -685,18 +879,21 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     running = false;
     cancelAnimationFrame(rafId);
   }
+  function syncLoopState() {
+    shouldRunLoop() ? startLoop() : stopLoop();
+  }
 
   const obs = new IntersectionObserver((entries) => {
     const e = entries[0];
     heroVisible = e.isIntersecting;
-    if (!heroVisible) { stopLoop(); return; }
-    fpsCap = e.intersectionRatio < 0.42 ? 28 : 60;
-    startLoop();
+    if (heroVisible) fpsCap = e.intersectionRatio < 0.42 ? 28 : 60;
+    else if (scrollDisperseActive) fpsCap = 45;
+    syncLoopState();
   }, { threshold: [0, 0.25, 0.42, 0.6, 1] });
   obs.observe(hero);
 
   document.addEventListener('visibilitychange', () => {
-    document.hidden || !heroVisible ? stopLoop() : startLoop();
+    syncLoopState();
   });
   reducedMotion.addEventListener('change', () => {
     if (reducedMotion.matches) {
@@ -705,10 +902,21 @@ export function initEarthHero({ heroSelector, canvasSelector, fallbackSelector }
     }
   });
 
-  updateSizes();
-  startLoop();
+  window.addEventListener('scroll', () => {
+    updateDisperseFromScroll();
+    if (scrollDisperseActive && !heroVisible) fpsCap = 45;
+    syncLoopState();
+  }, { passive: true });
 
-  window.addEventListener('resize', updateSizes);
+  updateSizes();
+  updateDisperseFromScroll();
+  syncLoopState();
+
+  window.addEventListener('resize', () => {
+    updateSizes();
+    updateDisperseFromScroll();
+    syncLoopState();
+  });
   canvas.addEventListener('pointerdown',  handlePointerDown);
   canvas.addEventListener('pointermove',  handlePointerMove);
   canvas.addEventListener('pointerleave', handlePointerLeave);

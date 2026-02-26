@@ -1,31 +1,460 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Freedo Earth Visual</title>
-    <meta name="description" content="Freedo 粒子地球视觉演示" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/src/style.css" />
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞渡科技 - 空间智能基础设施</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     <script type="importmap">
-      {
-        "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
-          "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/"
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js",
+                "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.181.1/examples/jsm/"
+            }
         }
-      }
     </script>
-  </head>
-  <body>
-    <main>
-      <section id="hero" class="hero">
-        <div class="hero-visual">
-          <canvas id="earth-canvas" aria-label="3D 粒子地球"></canvas>
-          <img id="hero-fallback" class="hero-fallback" src="/assets/hero-fallback.svg" alt="" />
-        </div>
-      </section>
-    </main>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#3B82F6',
+                        dark: '#050505',
+                        'dark-light': '#0A0A0A',
+                        'dark-lighter': '#141414',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+</head>
+<body class="antialiased selection:bg-primary selection:text-white">
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+    <!-- Earth Background -->
+    <div id="canvas-container" aria-hidden="true">
+        <div id="earth-background">
+            <div class="earth-background-visual">
+                <canvas id="earth-canvas" aria-label="3D 粒子地球"></canvas>
+                <img id="hero-fallback" class="earth-background-fallback" src="/assets/hero-fallback.svg" alt="">
+            </div>
+        </div>
+    </div>
+
+    <div id="page-content">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 top-0 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0 cursor-pointer">
+                    <span class="text-2xl font-bold tracking-tighter text-white">
+                        飞渡<span class="text-primary">科技</span>
+                    </span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#product" class="text-sm text-gray-300 hover:text-white transition-colors">产品</a>
+                        <a href="#technology" class="text-sm text-gray-300 hover:text-white transition-colors">技术</a>
+                        <a href="#solutions" class="text-sm text-gray-300 hover:text-white transition-colors">解决方案</a>
+                        <a href="#cases" class="text-sm text-gray-300 hover:text-white transition-colors">案例</a>
+                        <a href="#contact" class="magnetic-btn px-6 py-2.5 rounded-full border border-white/20 text-sm hover:bg-white hover:text-black transition-all duration-300">
+                            联系我们
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center px-6 lg:px-8 pt-20">
+        <div class="max-w-7xl mx-auto w-full lg:-ml-4 xl:-ml-6">
+            <div class="grid gap-12 items-center">
+                <div class="space-y-8">
+                    <div class="inline-flex items-center px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs text-gray-400 space-x-2 reveal-up">
+                        <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        <span>空间智能大模型 v1.0 已发布</span>
+                    </div>
+                    
+                    <h1 class="text-5xl lg:text-7xl font-bold leading-tight tracking-tight reveal-up" style="transition-delay: 0.1s">
+                        解构世界<br>
+                        <span class="gradient-text-blue">看见世界</span>
+                    </h1>
+                    
+                    <p class="text-lg lg:text-xl text-gray-400 max-w-lg leading-relaxed reveal-up" style="transition-delay: 0.2s">
+                        飞渡空间智能构建从物理世界感知到3D生成的全栈技术，赋能数字孪生、智能仿真与下一代人机交互。
+                    </p>
+                    
+                    <div class="flex flex-wrap gap-4 reveal-up" style="transition-delay: 0.3s">
+                        <button class="magnetic-btn px-8 py-4 bg-primary hover:bg-blue-600 rounded-full font-medium transition-all duration-300 flex items-center gap-2 group">
+                            探索技术
+                            <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </button>
+                        <button class="magnetic-btn px-8 py-4 border border-white/20 hover:bg-white/5 rounded-full font-medium transition-all duration-300">
+                            查看Demo
+                        </button>
+                    </div>
+                    
+                    <div class="pt-8 flex items-center gap-8 text-sm text-gray-500 reveal-up" style="transition-delay: 0.4s">
+                        <div>
+                            <div class="text-2xl font-bold text-white">10亿+</div>
+                            <div>参数规模</div>
+                        </div>
+                        <div class="w-px h-10 bg-white/10"></div>
+                        <div>
+                            <div class="text-2xl font-bold text-white">实时</div>
+                            <div>3D生成</div>
+                        </div>
+                        <div class="w-px h-10 bg-white/10"></div>
+                        <div>
+                            <div class="text-2xl font-bold text-white">厘米级</div>
+                            <div>重建精度</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Manifesto Section -->
+    <section id="manifesto" class="min-h-screen px-6 lg:px-8 py-24 relative flex items-center">
+        <div class="max-w-5xl mx-auto text-center space-y-8">
+            <h2 class="text-3xl lg:text-5xl font-bold leading-tight reveal-up">
+                空间智能将<span class="gradient-text-blue">感知</span>转化为<span class="gradient-text">理解</span><br>
+                将<span class="gradient-text-blue">想象</span>转化为<span class="gradient-text">创造</span>
+            </h2>
+            <p class="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed reveal-up">
+                我们致力于构建能够理解、推理和交互三维世界的AI系统， bridging the gap between physical and digital realities.
+            </p>
+        </div>
+    </section>
+
+    <!-- Product Section -->
+    <section id="product" class="py-24 px-6 lg:px-8 bg-dark-light/50">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-16 reveal-up">
+                <h2 class="text-4xl lg:text-5xl font-bold mb-4">从像素到世界</h2>
+                <p class="text-gray-400 text-lg">飞渡大模型生成空间一致、高保真、可交互的3D世界</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="md:col-span-2 lg:col-span-3 reveal-up">
+                    <div class="glass rounded-2xl overflow-hidden border border-white/10">
+                        <video
+                            class="w-full h-auto block"
+                            src="/assets/proejct_video1.mp4"
+                            autoplay
+                            muted
+                            loop
+                            playsinline
+                            preload="metadata"
+                        ></video>
+                    </div>
+                </div>
+
+                <!-- Feature 1 -->
+                <div class="feature-card glass rounded-2xl p-8 reveal-up">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">多模态输入</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">从文本、图像、视频或360°全景图创建详细的3D世界，支持多种数据格式无缝导入。</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="feature-card glass rounded-2xl p-8 reveal-up" style="transition-delay: 0.1s">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">3D布局控制</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">精确控制生成世界的三维布局，支持草图输入和语义级别的场景编辑与调整。</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="feature-card glass rounded-2xl p-8 reveal-up" style="transition-delay: 0.2s">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">交互式编辑</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">调整特定元素或重塑整个3D世界，完全可控的生成过程，实时预览修改效果。</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="feature-card glass rounded-2xl p-8 reveal-up">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">世界扩展与融合</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">扩展、编辑和组合生成的世界，构建更大、更沉浸的环境，支持大范围场景生成。</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card glass rounded-2xl p-8 reveal-up" style="transition-delay: 0.1s">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">多格式输出</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">支持各种2D和3D格式下载导出，无缝集成到您的工作流和管线中。</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card glass rounded-2xl p-8 reveal-up" style="transition-delay: 0.2s">
+                    <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6 text-primary">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">实时渲染</h3>
+                    <p class="text-gray-400 text-sm leading-relaxed">基于物理的实时渲染引擎，确保生成场景的视觉效果符合真实世界光照规律。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solutions Section -->
+    <section id="solutions" class="py-24 px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto space-y-16">
+            <div class="text-center reveal-up">
+                <h2 class="text-4xl lg:text-5xl font-bold mb-4">行业解决方案</h2>
+                <p class="text-gray-400">赋能关键基础设施的数字化转型</p>
+            </div>
+
+            <div class="space-y-24">
+                <!-- Solution 1 -->
+                <div class="grid lg:grid-cols-2 gap-12 items-center reveal-up">
+                    <div class="order-2 lg:order-1 space-y-6">
+                        <div class="inline-block px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm border border-blue-500/20">
+                            国防与能源
+                        </div>
+                        <h3 class="text-3xl font-bold">装备精准运维与智能调度</h3>
+                        <p class="text-gray-400 leading-relaxed">
+                            通过高保真数字孪生技术，实现复杂装备的全生命周期管理。支持故障预测、远程运维和智能调度，保障国家关键基础设施的安全运行。
+                        </p>
+                        <ul class="space-y-3 text-gray-300">
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                装备数字孪生体构建
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                预测性维护与故障诊断
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                多源数据融合分析
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="order-1 lg:order-2 h-[400px] rounded-2xl bg-gradient-to-br from-blue-900/20 to-dark-lighter border border-white/5 flex items-center justify-center">
+                        <span class="text-gray-600">[3D场景展示区域]</span>
+                    </div>
+                </div>
+
+                <!-- Solution 2 -->
+                <div class="grid lg:grid-cols-2 gap-12 items-center reveal-up">
+                    <div class="h-[400px] rounded-2xl bg-gradient-to-br from-purple-900/20 to-dark-lighter border border-white/5 flex items-center justify-center">
+                        <span class="text-gray-600">[城市级仿真展示]</span>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="inline-block px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm border border-purple-500/20">
+                            智慧城市
+                        </div>
+                        <h3 class="text-3xl font-bold">城市级空间智能平台</h3>
+                        <p class="text-gray-400 leading-relaxed">
+                            构建城市数字孪生底座，实现从宏观城市规划到微观建筑管理的全尺度覆盖。支持实时数据接入、模拟仿真和决策支持。
+                        </p>
+                        <ul class="space-y-3 text-gray-300">
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                城市级3D重建与更新
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                交通流量模拟与优化
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                应急演练与预案推演
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="cta-section" class="min-h-screen px-6 lg:px-8 py-24 relative overflow-hidden flex items-center justify-center">
+        <div class="max-w-4xl mx-auto text-center relative z-10 space-y-8 reveal-up">
+            <h2 class="text-4xl lg:text-6xl font-bold">准备好构建你的<br>空间智能应用了吗？</h2>
+            <p class="text-xl text-gray-400">加入飞渡科技，探索物理与数字世界的无限可能</p>
+            <div class="flex flex-wrap justify-center gap-4 pt-4">
+                <button class="magnetic-btn px-8 py-4 bg-primary hover:bg-blue-600 rounded-full font-medium transition-all duration-300">
+                    开始创建
+                </button>
+                <button class="magnetic-btn px-8 py-4 border border-white/20 hover:bg-white/5 rounded-full font-medium transition-all duration-300">
+                    联系销售
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 py-12 px-6 lg:px-8 bg-dark-light/30">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-2xl font-bold tracking-tighter">
+                飞渡<span class="text-primary">科技</span>
+            </div>
+            <div class="text-sm text-gray-500">
+                © 2024 飞渡科技空间智能. All rights reserved.
+            </div>
+            <div class="flex gap-6">
+                <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                    <span class="sr-only">GitHub</span>
+                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                    </svg>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                    <span class="sr-only">Twitter</span>
+                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+    </div>
+
+    <script type="module">
+        import { initEarthHero } from '/src/earthScene.js';
+
+        initEarthHero({
+            heroSelector: '#earth-background',
+            canvasSelector: '#earth-canvas',
+            fallbackSelector: '#hero-fallback',
+            disintegrateTriggerSelector: '#manifesto',
+            reassembleTriggerSelector: '#cta-section'
+        });
+    </script>
+    <script>
+        // Initialize GSAP
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Scroll animations
+        const revealElements = document.querySelectorAll('.reveal-up');
+
+        revealElements.forEach((element) => {
+            gsap.fromTo(element,
+                {
+                    opacity: 0,
+                    y: 50
+                },
+                {
+                    opacity: 1,
+                    y: 0,
+                    duration: 1,
+                    ease: "power3.out",
+                    scrollTrigger: {
+                        trigger: element,
+                        start: "top 85%",
+                        toggleActions: "play none none reverse"
+                    },
+                    delay: element.style.transitionDelay ? parseFloat(element.style.transitionDelay) : 0
+                }
+            );
+        });
+
+        // Navbar glass effect on scroll
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('glass');
+            } else {
+                navbar.classList.remove('glass');
+            }
+        });
+
+        // Magnetic button effect
+        const magneticBtns = document.querySelectorAll('.magnetic-btn');
+        
+        magneticBtns.forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                
+                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+            });
+            
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'translate(0px, 0px)';
+            });
+        });
+
+        // Smooth scroll polyfill for Safari
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
 </html>
