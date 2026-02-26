@@ -16,7 +16,7 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/style.css">
+    <link rel="stylesheet" href="./src/style.css">
     
     <script>
         tailwind.config = {
@@ -54,7 +54,7 @@
         <div id="earth-background">
             <div class="earth-background-visual">
                 <canvas id="earth-canvas" aria-label="3D 粒子地球"></canvas>
-                <img id="hero-fallback" class="earth-background-fallback" src="/assets/hero-fallback.svg" alt="">
+                <img id="hero-fallback" class="earth-background-fallback" src="./assets/hero-fallback.svg" alt="">
             </div>
         </div>
     </div>
@@ -170,7 +170,7 @@
                     <div class="glass rounded-2xl overflow-hidden border border-white/10">
                         <video
                             class="w-full h-auto block"
-                            src="/assets/proejct_video1.mp4"
+                            src="./assets/proejct_video1.mp4"
                             autoplay
                             muted
                             loop
@@ -377,7 +377,7 @@
     </div>
 
     <script type="module">
-        import { initEarthHero } from '/src/earthScene.js';
+        import { initEarthHero } from './src/earthScene.js';
 
         initEarthHero({
             heroSelector: '#earth-background',
