@@ -6,6 +6,40 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 const SPHERE_RADIUS = 1;
 const MAX_DISPERSE = 0.6;
 const CTA_REASSEMBLE_RATIO = 0.96;
+const MARKER_RAISE = 0.03;
+const MARKER_HIT_RADIUS = 0.07;
+const BASE_GLOBE_ROT_Y = 0;
+const UP_AXIS = new THREE.Vector3(0, 1, 0);
+
+const CLICKABLE_LOCATIONS = [
+  {
+    id: 'abu-dhabi',
+    label: 'Abu Dhabi',
+    lat: 24.4539,
+    lon: 54.3773,
+    color: 0xff755c,
+    demoPort: 3001,
+    demoPath: '/',
+  },
+  {
+    id: 'beijing',
+    label: 'Beijing',
+    lat: 39.9042,
+    lon: 116.4074,
+    color: 0xff4d6d,
+    demoPort: 3002,
+    demoPath: '/',
+  },
+  {
+    id: 'shanghai',
+    label: 'Shanghai',
+    lat: 31.2304,
+    lon: 121.4737,
+    color: 0xff5f6d,
+    demoPort: 3003,
+    demoPath: '/',
+  },
+];
 
 // Natural Earth 110m land polygons – small (~80 KB), accurate outlines
 const GEOJSON_URL =
@@ -32,6 +66,110 @@ function getElementExposureRatio(element) {
   const visible = Math.max(0, Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0));
   const height = Math.max(1, rect.height);
   return THREE.MathUtils.clamp(visible / height, 0, 1);
+}
+
+function latLonToVector3(latDeg, lonDeg, radius = SPHERE_RADIUS) {
+  const lat = THREE.MathUtils.degToRad(latDeg);
+  const lon = THREE.MathUtils.degToRad(lonDeg);
+  const cosLat = Math.cos(lat);
+  return new THREE.Vector3(
+    Math.sin(lon) * cosLat * radius,
+    Math.sin(lat) * radius,
+    Math.cos(lon) * cosLat * radius
+  );
+}
+
+function resolveDemoUrl(location) {
+  const protocol = window.location.protocol === 'file:' ? 'http:' : (window.location.protocol || 'http:');
+  const host = window.location.hostname || 'localhost';
+  const path = location.demoPath || '/';
+  return `${protocol}//${host}:${location.demoPort}${path}`;
+}
+
+function ensureDemoPortal() {
+  const existing = document.querySelector('[data-demo-portal]');
+  if (existing?.__demoPortalRefs) return existing.__demoPortalRefs;
+
+  const portal = document.createElement('div');
+  portal.className = 'demo-portal';
+  portal.hidden = true;
+  portal.setAttribute('data-demo-portal', '');
+  portal.innerHTML = `
+    <div class="demo-portal__panel" role="dialog" aria-modal="true" aria-labelledby="demo-portal-title">
+      <div class="demo-portal__header">
+        <div>
+          <p class="demo-portal__eyebrow">Location Demo</p>
+          <h2 class="demo-portal__title" id="demo-portal-title">Demo</h2>
+          <p class="demo-portal__meta" data-demo-portal-url></p>
+        </div>
+        <div class="demo-portal__actions">
+          <a
+            class="demo-portal__link"
+            data-demo-portal-link
+            href="/"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            Open In New Tab
+          </a>
+          <button class="demo-portal__close" type="button" data-demo-portal-close aria-label="Close demo">
+            Close
+          </button>
+        </div>
+      </div>
+      <div class="demo-portal__frame-wrap">
+        <iframe
+          class="demo-portal__frame"
+          title="Location demo preview"
+          src="about:blank"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+        ></iframe>
+      </div>
+    </div>
+  `;
+  document.body.append(portal);
+
+  const titleEl = portal.querySelector('#demo-portal-title');
+  const urlEl = portal.querySelector('[data-demo-portal-url]');
+  const frameEl = portal.querySelector('.demo-portal__frame');
+  const linkEl = portal.querySelector('[data-demo-portal-link]');
+
+  function closePortal() {
+    portal.classList.remove('is-open');
+    frameEl.src = 'about:blank';
+    window.setTimeout(() => {
+      if (!portal.classList.contains('is-open')) portal.hidden = true;
+    }, 180);
+  }
+
+  function openPortal(location) {
+    const demoUrl = resolveDemoUrl(location);
+    titleEl.textContent = `${location.label} Demo`;
+    urlEl.textContent = demoUrl;
+    linkEl.href = demoUrl;
+    frameEl.src = demoUrl;
+    portal.hidden = false;
+    requestAnimationFrame(() => {
+      portal.classList.add('is-open');
+    });
+  }
+
+  portal.addEventListener('click', (event) => {
+    if (event.target === portal || event.target.closest('[data-demo-portal-close]')) {
+      closePortal();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && portal.classList.contains('is-open')) {
+      closePortal();
+    }
+  });
+
+  const refs = { openPortal, closePortal };
+  portal.__demoPortalRefs = refs;
+  return refs;
 }
 
 // ─── Procedural blob fallback (used only if GeoJSON fetch fails) ──────────────
@@ -176,7 +314,7 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
     const xp    = r * Math.cos(theta);
     const zp    = r * Math.sin(theta);
     const latDeg = THREE.MathUtils.radToDeg(Math.asin(u));
-    const lonDeg = THREE.MathUtils.radToDeg(Math.atan2(zp, xp));
+    const lonDeg = THREE.MathUtils.radToDeg(Math.atan2(xp, zp));
 
     const raw    = landWeightFn(latDeg, lonDeg);
     const isLand = raw >= 1 ? 1 : 0;
@@ -285,12 +423,14 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
       varying float vProbe;
       varying float vLand;
       varying float vCoast;
+      varying float vFrontMask;
 
       void main() {
         vec3 pos = position;
-        float breath    = sin(uTime * 0.85 + aPhase * 6.2831) * 0.010;
-        float noiseFlow = sin(aSeed * 10.0 + uTime * 0.65) * 0.005;
-        pos += normalize(position) * (breath + noiseFlow * (1.0 - uReduceMotion));
+        float breathPhase = sin(uTime * 0.85 + aPhase * 6.2831) * 0.5 + 0.5;
+        float noisePhase = sin(aSeed * 10.0 + uTime * 0.65) * 0.5 + 0.5;
+        float shellLift = (breathPhase * 0.008 + noisePhase * 0.004) * (1.0 - uReduceMotion);
+        pos += normalize(position) * shellLift;
 
         float disperse = clamp(uDisperse, 0.0, 1.0);
         float motionScale = mix(0.12, 1.0, 1.0 - uReduceMotion);
@@ -317,6 +457,13 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
 
         vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
+
+        vec3 worldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
+        vec3 worldCenter = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        vec3 worldNormal = normalize(worldPos - worldCenter);
+        vec3 viewDir = normalize(cameraPosition - worldPos);
+        float facing = dot(worldNormal, viewDir);
+        vFrontMask = smoothstep(-0.02, 0.08, facing);
 
         float persp      = 8.5 / -mvPosition.z;
         float jitter     = mix(0.82, 1.15, aSeed);
@@ -346,6 +493,8 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
       varying float vProbe;
       varying float vLand;
       varying float vCoast;
+      varying float vFrontMask;
+      uniform float uDisperse;
 
       void main() {
         float d    = length(gl_PointCoord - 0.5);
@@ -362,7 +511,8 @@ function buildPointCloud(count, landWeightFn = proceduralLand) {
         color *= 0.95;                                        // keep global brightness stable while dragging
         color  = mix(color, probeColor, vRingGlow * 0.40 + min(0.75, vProbe * 1.1));
 
-        float alpha = mask * vAlpha;
+        float frontMask = mix(vFrontMask, 1.0, smoothstep(0.18, 0.42, uDisperse));
+        float alpha = mask * vAlpha * frontMask;
         if (alpha < 0.02) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -492,6 +642,141 @@ function buildDriftAura(count) {
   return new THREE.Points(geometry, material);
 }
 
+function resolveMarkerAnchor(location, pointCloud = null) {
+  const target = latLonToVector3(location.lat, location.lon, SPHERE_RADIUS).normalize();
+  if (!pointCloud?.geometry) return target.clone().multiplyScalar(SPHERE_RADIUS);
+
+  const positionAttr = pointCloud.geometry.getAttribute('position');
+  if (!positionAttr?.array) return target.clone().multiplyScalar(SPHERE_RADIUS);
+
+  const positions = positionAttr.array;
+  const landAttr = pointCloud.geometry.getAttribute('aLand')?.array || null;
+  const coastAttr = pointCloud.geometry.getAttribute('aCoast')?.array || null;
+
+  let bestLandScore = -Infinity;
+  let bestLandIndex = -1;
+  let bestFallbackScore = -Infinity;
+  let bestFallbackIndex = -1;
+
+  for (let i = 0; i < positionAttr.count; i += 1) {
+    const idx = i * 3;
+    const px = positions[idx];
+    const py = positions[idx + 1];
+    const pz = positions[idx + 2];
+    const length = Math.hypot(px, py, pz) || 1;
+    const alignment = (target.x * px + target.y * py + target.z * pz) / length;
+
+    if (alignment > bestFallbackScore) {
+      bestFallbackScore = alignment;
+      bestFallbackIndex = idx;
+    }
+
+    const isLand = !landAttr || landAttr[i] > 0.5;
+    if (!isLand) continue;
+
+    const coastalBias = coastAttr ? coastAttr[i] * 0.015 : 0;
+    const score = alignment + coastalBias;
+    if (score > bestLandScore) {
+      bestLandScore = score;
+      bestLandIndex = idx;
+    }
+  }
+
+  const bestIndex = bestLandIndex >= 0 ? bestLandIndex : bestFallbackIndex;
+  if (bestIndex < 0) return target.clone().multiplyScalar(SPHERE_RADIUS);
+
+  return new THREE.Vector3(
+    positions[bestIndex],
+    positions[bestIndex + 1],
+    positions[bestIndex + 2]
+  ).normalize().multiplyScalar(SPHERE_RADIUS);
+}
+
+function buildCityMarkers(locations) {
+  const group = new THREE.Group();
+
+  for (const [index, location] of locations.entries()) {
+    const color = new THREE.Color(location.color);
+    const anchor = resolveMarkerAnchor(location);
+    const normal = anchor.clone().normalize();
+
+    const marker = new THREE.Group();
+    marker.position.copy(anchor);
+    marker.quaternion.setFromUnitVectors(UP_AXIS, normal);
+    marker.userData.location = location;
+    marker.userData.pulseOffset = index * 1.15;
+
+    const hitArea = new THREE.Mesh(
+      new THREE.SphereGeometry(MARKER_HIT_RADIUS, 18, 18),
+      new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      })
+    );
+    hitArea.position.y = MARKER_RAISE + 0.012;
+    hitArea.userData.location = location;
+    marker.add(hitArea);
+
+    const halo = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 18, 18),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.16,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    halo.position.y = MARKER_RAISE;
+    halo.userData.location = location;
+    marker.add(halo);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.038, 0.0045, 10, 42),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.92,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+    );
+    ring.position.y = MARKER_RAISE;
+    ring.rotation.x = Math.PI / 2;
+    ring.userData.location = location;
+    marker.add(ring);
+
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 20, 20),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 1,
+      })
+    );
+    core.position.y = MARKER_RAISE;
+    core.userData.location = location;
+    marker.add(core);
+
+    marker.userData.parts = { core, ring, halo };
+    group.add(marker);
+  }
+
+  return group;
+}
+
+function updateCityMarkerAnchors(group, pointCloud) {
+  if (!group) return;
+
+  for (const marker of group.children) {
+    const anchor = resolveMarkerAnchor(marker.userData.location, pointCloud);
+    const normal = anchor.clone().normalize();
+    marker.position.copy(anchor);
+    marker.quaternion.setFromUnitVectors(UP_AXIS, normal);
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function initEarthHero({
   heroSelector,
@@ -540,6 +825,8 @@ export function initEarthHero({
 
   const globeGroup = new THREE.Group();
   scene.add(globeGroup);
+  const demoPortal = ensureDemoPortal();
+  let cityMarkers = null;
 
   // Start with procedural blobs, replace once GeoJSON loads
   let points = buildPointCloud(particleCount);
@@ -561,6 +848,7 @@ export function initEarthHero({
     points.material.dispose();
     points = next;
     globeGroup.add(points);
+    updateCityMarkerAnchors(cityMarkers, points);
   }
 
   // Fetch GeoJSON & bake land mask, then rebuild point cloud
@@ -573,8 +861,8 @@ export function initEarthHero({
     new THREE.SphereGeometry(0.978, 64, 48),
     new THREE.MeshPhongMaterial({
       color: 0x04111c,
-      transparent: true,
-      opacity: 0.84,
+      transparent: false,
+      opacity: 1,
       specular: 0x102838,
       shininess: 14,
     })
@@ -600,6 +888,10 @@ export function initEarthHero({
 
   const latitudeLines = buildLatitudeLines();
   globeGroup.add(latitudeLines);
+
+  cityMarkers = buildCityMarkers(CLICKABLE_LOCATIONS);
+  updateCityMarkerAnchors(cityMarkers, points);
+  globeGroup.add(cityMarkers);
 
   // Scan ring
   const scanRing = new THREE.Mesh(
@@ -640,6 +932,7 @@ export function initEarthHero({
   const localPt        = new THREE.Vector3();
   const hitPt          = new THREE.Vector3(9, 9, 9);
   const hitSphere      = new THREE.Sphere(new THREE.Vector3(), SPHERE_RADIUS * 1.08);
+  const markerHits = [];
   let curMouse = 0, targetMouse = 0;
   let running = false, heroVisible = true, fpsCap = 60, rafId = 0, lastFrame = 0;
   let isDragging = false, dragId = -1, lastX = 0, lastY = 0;
@@ -648,6 +941,11 @@ export function initEarthHero({
   let disperse = 0, targetDisperse = 0;
   let tighten = 0, targetTighten = 0;
   let scrollDisperseActive = false;
+  let hoveredLocation = null;
+  let pressedLocation = null;
+  let pressPointerId = -1;
+  let pressX = 0;
+  let pressY = 0;
 
   function disintegrationInFlight() {
     return Math.abs(targetDisperse - disperse) > 0.001;
@@ -661,9 +959,36 @@ export function initEarthHero({
     return targetDisperse > 0.001 || targetTighten > 0.001;
   }
 
+  function updateCanvasCursor() {
+    if (scrollDisperseActive) {
+      canvas.style.cursor = 'default';
+      return;
+    }
+    if (isDragging) {
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+    canvas.style.cursor = hoveredLocation ? 'pointer' : 'grab';
+  }
+
+  function updatePointerFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  function getHoveredLocation() {
+    raycaster.setFromCamera(pointer, camera);
+    markerHits.length = 0;
+    raycaster.intersectObjects(cityMarkers.children, true, markerHits);
+    const hitObject = markerHits[0]?.object;
+    return hitObject?.userData?.location || hitObject?.parent?.userData?.location || null;
+  }
+
   function cancelDragInteraction() {
     if (!isDragging) {
       canvas.classList.remove('is-dragging');
+      updateCanvasCursor();
       return;
     }
     isDragging = false;
@@ -673,6 +998,7 @@ export function initEarthHero({
     }
     dragId = -1;
     inertX = inertY = 0;
+    updateCanvasCursor();
   }
 
   function updateSizes() {
@@ -694,7 +1020,7 @@ export function initEarthHero({
       targetDisperse = 0;
       targetTighten = 0;
       scrollDisperseActive = false;
-      canvas.style.cursor = '';
+      updateCanvasCursor();
       return;
     }
 
@@ -707,7 +1033,7 @@ export function initEarthHero({
         targetMouse = 0;
         cancelDragInteraction();
       }
-      canvas.style.cursor = scrollDisperseActive ? 'default' : '';
+      updateCanvasCursor();
       return;
     }
 
@@ -749,29 +1075,69 @@ export function initEarthHero({
       targetMouse = 0;
       cancelDragInteraction();
     }
-    canvas.style.cursor = scrollDisperseActive ? 'default' : '';
+    updateCanvasCursor();
   }
 
   function handlePointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (interactionLocked()) return;
+    updatePointerFromEvent(e);
+    hoveredLocation = getHoveredLocation();
+    updateCanvasCursor();
+    if (hoveredLocation) {
+      pressedLocation = hoveredLocation;
+      pressPointerId = e.pointerId;
+      pressX = e.clientX;
+      pressY = e.clientY;
+      targetMouse = 0;
+      return;
+    }
     isDragging = true; dragId = e.pointerId;
     lastX = e.clientX; lastY = e.clientY;
     inertX = inertY = 0;
     canvas.setPointerCapture(e.pointerId);
     canvas.classList.add('is-dragging');
+    updateCanvasCursor();
   }
   function handlePointerUp(e) {
+    updatePointerFromEvent(e);
+    hoveredLocation = getHoveredLocation();
+    if (pressedLocation && e.pointerId === pressPointerId) {
+      const moved = Math.hypot(e.clientX - pressX, e.clientY - pressY);
+      if (hoveredLocation?.id === pressedLocation.id && moved < 10) {
+        demoPortal.openPortal(pressedLocation);
+      }
+      pressedLocation = null;
+      pressPointerId = -1;
+      updateCanvasCursor();
+      return;
+    }
     if (e.pointerId !== dragId) return;
     isDragging = false; dragId = -1;
     canvas.classList.remove('is-dragging');
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    updateCanvasCursor();
   }
   function handlePointerMove(e) {
     if (reducedMotion.matches || interactionLocked()) {
       targetMouse = 0;
+      hoveredLocation = null;
+      pressedLocation = null;
+      pressPointerId = -1;
       cancelDragInteraction();
       return;
+    }
+
+    updatePointerFromEvent(e);
+    hoveredLocation = getHoveredLocation();
+    updateCanvasCursor();
+
+    if (pressedLocation && e.pointerId === pressPointerId) {
+      const moved = Math.hypot(e.clientX - pressX, e.clientY - pressY);
+      if (moved >= 10) {
+        pressedLocation = null;
+        pressPointerId = -1;
+      }
     }
 
     if (isDragging && e.pointerId === dragId) {
@@ -783,9 +1149,10 @@ export function initEarthHero({
       targetRotX = THREE.MathUtils.clamp(targetRotX, -0.65, 0.65);
       inertY = dx * spd; inertX = dy * spd;
     }
-    const rect = canvas.getBoundingClientRect();
-    pointer.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-    pointer.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+    if (hoveredLocation) {
+      targetMouse = 0;
+      return;
+    }
     raycaster.setFromCamera(pointer, camera);
     if (raycaster.ray.intersectSphere(hitSphere, hitPt)) {
       localPt.copy(hitPt);
@@ -797,7 +1164,24 @@ export function initEarthHero({
       if (!isDragging) targetMouse = 0;
     }
   }
-  function handlePointerLeave() { if (!isDragging) targetMouse = 0; }
+  function handlePointerLeave() {
+    hoveredLocation = null;
+    pressedLocation = null;
+    pressPointerId = -1;
+    if (!isDragging) targetMouse = 0;
+    updateCanvasCursor();
+  }
+  function handlePointerCancel(e) {
+    hoveredLocation = null;
+    pressedLocation = null;
+    pressPointerId = -1;
+    targetMouse = 0;
+    if (isDragging && e.pointerId === dragId) {
+      cancelDragInteraction();
+      return;
+    }
+    updateCanvasCursor();
+  }
 
   function frame(ts) {
     if (!running) return;
@@ -833,11 +1217,22 @@ export function initEarthHero({
     globeGroup.position.y = THREE.MathUtils.lerp(0, -1.5, tighten);
 
     globeGroup.rotation.x = smoothRotX;
-    globeGroup.rotation.y = smoothRotY;
+    globeGroup.rotation.y = BASE_GLOBE_ROT_Y + smoothRotY;
 
     const auraScale = THREE.MathUtils.lerp(1, 1.12, tighten);
     driftAura.scale.setScalar(auraScale);
     driftAura.position.y = THREE.MathUtils.lerp(0, -0.58, tighten);
+
+    for (const marker of cityMarkers.children) {
+      const pulseBase = 1 + Math.sin(t * 3.4 + marker.userData.pulseOffset) * 0.08;
+      const activeBoost = hoveredLocation?.id === marker.userData.location.id ? 0.22 : 0;
+      const { core, ring, halo } = marker.userData.parts;
+      core.scale.setScalar(pulseBase + activeBoost * 0.35);
+      ring.scale.setScalar(1 + Math.sin(t * 2.2 + marker.userData.pulseOffset) * 0.12 + activeBoost);
+      halo.scale.setScalar(1 + Math.sin(t * 1.9 + marker.userData.pulseOffset) * 0.16 + activeBoost * 0.85);
+      halo.material.opacity = 0.16 + activeBoost * 0.2;
+      ring.material.opacity = 0.88 + activeBoost * 0.12;
+    }
 
     wireframe.rotation.y -= 0.0006 * (0.45 + intact * 0.55);
     latitudeLines.rotation.y += 0.0009 * (0.45 + intact * 0.55);
@@ -910,6 +1305,7 @@ export function initEarthHero({
 
   updateSizes();
   updateDisperseFromScroll();
+  updateCanvasCursor();
   syncLoopState();
 
   window.addEventListener('resize', () => {
@@ -921,7 +1317,7 @@ export function initEarthHero({
   canvas.addEventListener('pointermove',  handlePointerMove);
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('pointerup',    handlePointerUp);
-  canvas.addEventListener('pointercancel', handlePointerUp);
+  canvas.addEventListener('pointercancel', handlePointerCancel);
 
   visual.classList.remove('fallback-active');
 }
