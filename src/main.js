@@ -1,7 +1,7 @@
-import { initEarthHero } from './earthScene.js';
+import { initI18n } from './i18n/runtime.js';
+import { initInteractions } from './interactions.js';
+import { initEarthBackground } from './earth-init.js';
 
-initEarthHero({
-  heroSelector: '#hero',
-  canvasSelector: '#earth-canvas',
-  fallbackSelector: '#hero-fallback'
-});
+initI18n();
+initInteractions();
+initEarthBackground();
