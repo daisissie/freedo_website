@@ -2,10 +2,10 @@ window.SITE_I18N = window.SITE_I18N || {};
 
 // 文案统一维护在这里；页面结构请修改 index.html。
 window.SITE_I18N.zh = {
-  page_title: '飞渡科技 - 空间智能基础设施',
+  page_title: 'Freedo AI Lab - 空间智能基础设施',
   hero_canvas_aria_label: '3D 粒子地球',
-  brand_main: '飞渡',
-  brand_suffix: '科技',
+  brand_main: 'Freedo',
+  brand_suffix: 'AI Lab',
   nav_product: '产品',
   nav_technology: '技术',
   nav_solutions: '解决方案',
@@ -61,8 +61,8 @@ window.SITE_I18N.zh = {
   solution_2_b3: '应急演练与预案推演',
   solution_2_placeholder: '[城市级仿真展示]',
   cta_title: '准备好构建你的<br>空间智能应用了吗？',
-  cta_desc: '加入飞渡科技，探索物理与数字世界的无限可能',
+  cta_desc: '加入Freedo AI Lab，探索物理与数字世界的无限可能',
   cta_btn_start: '开始创建',
   cta_btn_sales: '联系销售',
-  footer_copyright: '© 2024 飞渡科技空间智能. All rights reserved.',
+  footer_copyright: '© 2024 Freedo AI Lab空间智能. All rights reserved.',
 };

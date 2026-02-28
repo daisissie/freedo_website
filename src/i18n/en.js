@@ -2,10 +2,10 @@ window.SITE_I18N = window.SITE_I18N || {};
 
 // Copywriting is maintained here; adjust layout in index.html.
 window.SITE_I18N.en = {
-  page_title: 'Freedo Tech - Spatial Intelligence Infrastructure',
+  page_title: 'Freedo AI Lab - Spatial Intelligence Infrastructure',
   hero_canvas_aria_label: '3D Particle Earth',
   brand_main: 'Freedo',
-  brand_suffix: 'Tech',
+  brand_suffix: 'AI Lab',
   nav_product: 'Product',
   nav_technology: 'Technology',
   nav_solutions: 'Solutions',
@@ -61,8 +61,8 @@ window.SITE_I18N.en = {
   solution_2_b3: 'Emergency drills and scenario planning',
   solution_2_placeholder: '[City Simulation Showcase]',
   cta_title: 'Ready to build your<br>spatial intelligence app?',
-  cta_desc: 'Join Freedo to explore the endless possibilities between physical and digital worlds.',
+  cta_desc: 'Join Freedo AI Lab to explore the endless possibilities between physical and digital worlds.',
   cta_btn_start: 'Get Started',
   cta_btn_sales: 'Contact Sales',
-  footer_copyright: '© 2024 Freedo Spatial Intelligence. All rights reserved.',
+  footer_copyright: '© 2024 Freedo AI Lab Spatial Intelligence. All rights reserved.',
 };
