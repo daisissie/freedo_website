@@ -172,6 +172,42 @@ function ensureDemoPortal() {
   return refs;
 }
 
+let markerGlowTexture = null;
+
+function getMarkerGlowTexture() {
+  if (markerGlowTexture) return markerGlowTexture;
+
+  const size = 128;
+  const glowCanvas = document.createElement('canvas');
+  glowCanvas.width = size;
+  glowCanvas.height = size;
+
+  const ctx = glowCanvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(
+    size * 0.5,
+    size * 0.5,
+    size * 0.04,
+    size * 0.5,
+    size * 0.5,
+    size * 0.5
+  );
+
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.56)');
+  gradient.addColorStop(0.22, 'rgba(255, 255, 255, 0.24)');
+  gradient.addColorStop(0.54, 'rgba(255, 255, 255, 0.06)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  markerGlowTexture = new THREE.CanvasTexture(glowCanvas);
+  markerGlowTexture.generateMipmaps = false;
+  markerGlowTexture.minFilter = THREE.LinearFilter;
+  markerGlowTexture.magFilter = THREE.LinearFilter;
+
+  return markerGlowTexture;
+}
+
 // ─── Procedural blob fallback (used only if GeoJSON fetch fails) ──────────────
 const CONTINENT_BLOBS = [
   [52, -108, 26, 34, 1.0], [63, -150, 10, 16, 0.78], [32, -90, 16, 20, 0.82],
@@ -694,6 +730,7 @@ function resolveMarkerAnchor(location, pointCloud = null) {
 
 function buildCityMarkers(locations) {
   const group = new THREE.Group();
+  const glowMap = getMarkerGlowTexture();
 
   for (const [index, location] of locations.entries()) {
     const color = new THREE.Color(location.color);
@@ -718,48 +755,87 @@ function buildCityMarkers(locations) {
     hitArea.userData.location = location;
     marker.add(hitArea);
 
-    const halo = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 18, 18),
+    const stemHeight = 0.07;
+    const tipY = MARKER_RAISE + stemHeight;
+
+    const baseRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.016, 0.022, 48),
       new THREE.MeshBasicMaterial({
         color,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.14,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
+        side: THREE.DoubleSide,
+        toneMapped: false,
       })
     );
-    halo.position.y = MARKER_RAISE;
-    halo.userData.location = location;
-    marker.add(halo);
+    baseRing.position.y = MARKER_RAISE + 0.002;
+    baseRing.rotation.x = Math.PI / 2;
+    baseRing.userData.location = location;
+    marker.add(baseRing);
 
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.038, 0.0045, 10, 42),
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0016, 0.0016, stemHeight, 10),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.24,
+        depthWrite: false,
+        toneMapped: false,
+      })
+    );
+    stem.position.y = MARKER_RAISE + stemHeight * 0.5;
+    stem.userData.location = location;
+    marker.add(stem);
+
+    const tipGlow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: glowMap,
+        color,
+        transparent: true,
+        opacity: 0.055,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+      })
+    );
+    tipGlow.position.y = tipY;
+    tipGlow.scale.setScalar(0.075);
+    tipGlow.userData.location = location;
+    tipGlow.raycast = () => {};
+    marker.add(tipGlow);
+
+    const tipCore = new THREE.Mesh(
+      new THREE.SphereGeometry(0.0105, 18, 18),
       new THREE.MeshBasicMaterial({
         color,
         transparent: true,
         opacity: 0.92,
+        depthWrite: false,
+        toneMapped: false,
+      })
+    );
+    tipCore.position.y = tipY;
+    tipCore.userData.location = location;
+    marker.add(tipCore);
+
+    const tipHighlight = new THREE.Mesh(
+      new THREE.SphereGeometry(0.0045, 16, 16),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.84,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
+        toneMapped: false,
       })
     );
-    ring.position.y = MARKER_RAISE;
-    ring.rotation.x = Math.PI / 2;
-    ring.userData.location = location;
-    marker.add(ring);
+    tipHighlight.position.y = tipY + 0.001;
+    tipHighlight.userData.location = location;
+    marker.add(tipHighlight);
 
-    const core = new THREE.Mesh(
-      new THREE.SphereGeometry(0.018, 20, 20),
-      new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 1,
-      })
-    );
-    core.position.y = MARKER_RAISE;
-    core.userData.location = location;
-    marker.add(core);
-
-    marker.userData.parts = { core, ring, halo };
+    marker.userData.parts = { baseRing, stem, tipGlow, tipCore, tipHighlight };
     group.add(marker);
   }
 
@@ -1224,14 +1300,18 @@ export function initEarthHero({
     driftAura.position.y = THREE.MathUtils.lerp(0, -0.58, tighten);
 
     for (const marker of cityMarkers.children) {
-      const pulseBase = 1 + Math.sin(t * 3.4 + marker.userData.pulseOffset) * 0.08;
-      const activeBoost = hoveredLocation?.id === marker.userData.location.id ? 0.22 : 0;
-      const { core, ring, halo } = marker.userData.parts;
-      core.scale.setScalar(pulseBase + activeBoost * 0.35);
-      ring.scale.setScalar(1 + Math.sin(t * 2.2 + marker.userData.pulseOffset) * 0.12 + activeBoost);
-      halo.scale.setScalar(1 + Math.sin(t * 1.9 + marker.userData.pulseOffset) * 0.16 + activeBoost * 0.85);
-      halo.material.opacity = 0.16 + activeBoost * 0.2;
-      ring.material.opacity = 0.88 + activeBoost * 0.12;
+      const pulseWave = Math.sin(t * 2.4 + marker.userData.pulseOffset) * 0.5 + 0.5;
+      const activeBoost = hoveredLocation?.id === marker.userData.location.id ? 0.16 : 0;
+      const { baseRing, stem, tipGlow, tipCore, tipHighlight } = marker.userData.parts;
+      tipCore.scale.setScalar(0.94 + pulseWave * 0.06 + activeBoost * 0.14);
+      tipCore.material.opacity = 0.84 + pulseWave * 0.06 + activeBoost * 0.06;
+      tipHighlight.scale.setScalar(0.92 + pulseWave * 0.05 + activeBoost * 0.12);
+      tipHighlight.material.opacity = 0.7 + pulseWave * 0.1 + activeBoost * 0.08;
+      tipGlow.scale.setScalar(0.86 + pulseWave * 0.12 + activeBoost * 0.18);
+      tipGlow.material.opacity = 0.028 + pulseWave * 0.012 + activeBoost * 0.032;
+      baseRing.scale.setScalar(0.96 + pulseWave * 0.08 + activeBoost * 0.14);
+      baseRing.material.opacity = 0.09 + pulseWave * 0.03 + activeBoost * 0.05;
+      stem.material.opacity = 0.18 + pulseWave * 0.035 + activeBoost * 0.06;
     }
 
     wireframe.rotation.y -= 0.0006 * (0.45 + intact * 0.55);
