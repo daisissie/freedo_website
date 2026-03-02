@@ -6,26 +6,26 @@
 /* ── Variables ───────────────────────────────────────────────────────── */
 :root {
   /* Brand colours */
-  --bg:     #050505;
-  --bg2:    #0A0A0A;
+  --bg:     #ffffff;
+  --bg2:    #f4f4f4;
   --cyan:   #3B82F6;
   --amber:  #60A5FA;
   --blue:   #2563EB;
-  --white:  #f0f4ff;
+  --white:  #0a0a0a;
   --muted:  #6a7a99;
-  --card:   rgba(255,255,255,0.04);
-  --border: rgba(59,130,246,0.15);
+  --card:   rgba(0,0,0,0.04);
+  --border: rgba(59,130,246,0.18);
 
   /* Scrollbar */
-  --scrollbar-thumb:       #333;
-  --scrollbar-thumb-hover: #555;
+  --scrollbar-thumb:       #bbb;
+  --scrollbar-thumb-hover: #999;
 
   /* Glass surface */
-  --glass-bg:     rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg:     rgba(255,255,255,0.72);
+  --glass-border: rgba(0,0,0,0.1);
 
-  /* Earth canvas background — must match page bg so container shape is invisible */
-  --earth-gradient: var(--bg);
+  /* Earth canvas background — kept dark so the globe is visible */
+  --earth-gradient: #050505;
 }
 
 /* ── Reset ───────────────────────────────────────────────────────────── */
@@ -59,7 +59,7 @@ body::before {
 
 /* ── Text utilities ──────────────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  background: linear-gradient(135deg, #0a0a0a 0%, #4a5568 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -74,8 +74,9 @@ body::before {
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 1px 0 var(--glass-border);
 }
 
 /* ── Typography ──────────────────────────────────────────────────────── */
@@ -139,12 +140,12 @@ h2 {
   color: var(--white);
   font-size: 13px;
   letter-spacing: 0.05em;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(0,0,0,0.2);
   cursor: pointer;
   transition: all 0.3s;
   font-family: 'Noto Sans SC', sans-serif;
 }
-.btn-secondary:hover { border-color: rgba(255,255,255,0.5); }
+.btn-secondary:hover { border-color: rgba(0,0,0,0.4); }
 
 /* ── Magnetic button ─────────────────────────────────────────────────── */
 .magnetic-btn { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -154,7 +155,7 @@ h2 {
 .feature-card:hover {
   transform: translateY(-5px);
   border-color: rgba(59, 130, 246, 0.5);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 /* ── HERO ────────────────────────────────────────────────────────────── */
@@ -391,7 +392,11 @@ h2 {
   z-index: 1;
   overflow: hidden;
   pointer-events: auto;
-  border-radius: 50%;
+  /* border-radius intentionally omitted — GSAP owns it entirely.
+     A CSS % value here would cause elliptical interpolation artefacts. */
+  will-change: transform, border-radius;
+  transform: translateZ(0);  /* force GPU layer for clean anti-aliased clip */
+  isolation: isolate;
 }
 
 #page-content {
@@ -543,7 +548,7 @@ h2 {
   transform-origin: left;
   transition: transform 0.5s ease;
 }
-.tw-item:nth-child(1) .tw-bar { background: linear-gradient(to right, rgba(240,244,255,0.4), transparent); }
+.tw-item:nth-child(1) .tw-bar { background: linear-gradient(to right, rgba(0,0,0,0.25), transparent); }
 .tw-item:nth-child(2) .tw-bar { background: linear-gradient(to right, var(--cyan), transparent); }
 .tw-item:nth-child(3) .tw-bar { background: linear-gradient(to right, var(--amber), transparent); }
 .tw-item:hover .tw-bar { transform: scaleX(1); }
@@ -582,7 +587,7 @@ h2 {
   max-width: 780px;
   margin: 0 auto;
   text-align: center;
-  color: rgba(240,244,255,0.85);
+  color: rgba(10,10,10,0.82);
 }
 .narrative-text strong { color: var(--cyan); font-weight: 700; }
 .narrative-text em     { color: var(--amber); font-style: normal; font-weight: 600; }
@@ -602,7 +607,7 @@ h2 {
   left: 60px; right: 60px;
   height: 2px;
   background: linear-gradient(to right,
-    rgba(255,255,255,0.2) 0%,
+    rgba(0,0,0,0.15) 0%,
     var(--cyan) 33%,
     var(--amber) 66%,
     #7eb8ff 100%);
@@ -667,13 +672,13 @@ h2 {
   position: relative;
   background: var(--bg);
 }
-.pipe-step:nth-child(1) .pipe-badge { border-color: rgba(240,244,255,0.4); color: var(--white); }
+.pipe-step:nth-child(1) .pipe-badge { border-color: rgba(0,0,0,0.35); color: var(--white); }
 .pipe-step:nth-child(3) .pipe-badge { border-color: var(--cyan);  color: var(--cyan);  }
 .pipe-step:nth-child(5) .pipe-badge { border-color: var(--amber); color: var(--amber); }
 .pipe-step:nth-child(7) .pipe-badge { border-color: #7eb8ff;      color: #7eb8ff;      }
 
 .pipe-step:hover .pipe-badge { transform: translateY(-3px); }
-.pipe-step:nth-child(1):hover .pipe-badge { background: rgba(240,244,255,0.08); }
+.pipe-step:nth-child(1):hover .pipe-badge { background: rgba(0,0,0,0.05); }
 .pipe-step:nth-child(3):hover .pipe-badge { background: rgba(59,130,246,0.1);  }
 .pipe-step:nth-child(5):hover .pipe-badge { background: rgba(96,165,250,0.1);  }
 .pipe-step:nth-child(7):hover .pipe-badge { background: rgba(126,184,255,0.1); }
@@ -684,7 +689,7 @@ h2 {
   letter-spacing: 0.2em;
   transition: color 0.3s;
 }
-.pipe-step:nth-child(1) .pipe-subtitle { color: rgba(240,244,255,0.4); }
+.pipe-step:nth-child(1) .pipe-subtitle { color: rgba(0,0,0,0.4); }
 .pipe-step:nth-child(3) .pipe-subtitle { color: var(--cyan);  }
 .pipe-step:nth-child(5) .pipe-subtitle { color: var(--amber); }
 .pipe-step:nth-child(7) .pipe-subtitle { color: #7eb8ff;      }
@@ -694,10 +699,10 @@ h2 {
   aspect-ratio: 4/3;
   overflow: hidden;
   position: relative;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(0,0,0,0.1);
   transition: border-color 0.3s;
 }
-.pipe-step:nth-child(1):hover .pipe-visual { border-color: rgba(240,244,255,0.25); }
+.pipe-step:nth-child(1):hover .pipe-visual { border-color: rgba(0,0,0,0.25); }
 .pipe-step:nth-child(3):hover .pipe-visual { border-color: rgba(59,130,246,0.4);  }
 .pipe-step:nth-child(5):hover .pipe-visual { border-color: rgba(96,165,250,0.4);  }
 .pipe-step:nth-child(7):hover .pipe-visual { border-color: rgba(126,184,255,0.4); }
@@ -732,7 +737,7 @@ h2 {
 
 .scenario-card {
   background: var(--card);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(0,0,0,0.09);
   padding: 36px 30px;
   position: relative;
   overflow: hidden;
@@ -754,7 +759,7 @@ h2 {
 
 .scenario-foundation {
   margin-top: 24px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(59,130,246,0.08) 100%);
+  background: linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(59,130,246,0.06) 100%);
   border: 1px solid rgba(96,165,250,0.18);
   padding: 34px 30px;
   position: relative;
@@ -849,8 +854,8 @@ h2 {
   gap: 18px;
 }
 .carrier-card {
-  background: linear-gradient(160deg, rgba(255,255,255,0.05) 0%, rgba(59,130,246,0.08) 100%);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(160deg, rgba(0,0,0,0.03) 0%, rgba(59,130,246,0.06) 100%);
+  border: 1px solid rgba(0,0,0,0.09);
   padding: 30px 34px;
   transition: border-color 0.3s, background 0.3s;
   position: relative;
@@ -867,7 +872,7 @@ h2 {
 }
 .carrier-icon { font-size: 42px; grid-row: 1 / span 2; display: flex; align-items: center; justify-content: center; }
 .carrier-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; font-family: 'Noto Serif SC', serif; }
-.carrier-desc { font-size: 14px; color: rgba(240,244,255,0.72); line-height: 1.8; }
+.carrier-desc { font-size: 14px; color: var(--muted); line-height: 1.8; }
 
 /* ── CTA ─────────────────────────────────────────────────────────────── */
 .cta-section {
@@ -892,7 +897,7 @@ h2 {
 
 /* ── Footer ──────────────────────────────────────────────────────────── */
 footer {
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(0,0,0,0.1);
   padding: 36px 60px;
   display: flex;
   justify-content: space-between;

@@ -1,9 +1,12 @@
 /* ── Hero scroll animation ─────────────────────────────────────────────
    As the user scrolls through the hero section:
      1. Slogan text blurs / fades upward
-     2. Earth expands from circle → inset rounded rectangle below header
+     2. Earth morphs from small circle → inset rounded rectangle
    The hero section is pinned while the animation plays, then scrolls
    away naturally — taking the earth with it — as the next section rises.
+
+   All tween target values are function-based so they are re-evaluated
+   automatically when ScrollTrigger refreshes on window resize.
 ──────────────────────────────────────────────────────────────────────── */
 export function initHeroAnimation() {
   window.addEventListener('load', function () {
@@ -16,38 +19,59 @@ export function initHeroAnimation() {
     var scrollHint = document.getElementById('hero-scroll-hint');
     if (!container || !heroText || !heroSec) return;
 
-    // Initial position: circle in the right half, vertically centred.
-    // Matches CSS: left:50%, top:calc(50%-min(25vw,340px)), size:min(50vw,680px).
-    var initSize = Math.min(window.innerWidth * 0.5, 680);
-    var initLeft = window.innerWidth * 0.5;
-    var initTop  = window.innerHeight * 0.5 - initSize * 0.5;
+    // Stamp a pixel border-radius immediately so the browser never renders
+    // a frame with the default 0 (sharp corners) before GSAP applyInit runs.
+    var _preSize = Math.min(window.innerWidth * 0.5, 680);
+    container.style.borderRadius = (_preSize / 2) + 'px';
 
-    // Use pixel equivalent of 50% so GSAP never mixes % and px units mid-tween,
-    // which causes the "ear" corner artefact during the circle → rect transition.
-    gsap.set(container, {
-      left:         initLeft,
-      top:          initTop,
-      width:        initSize,
-      height:       initSize,
-      borderRadius: initSize / 2,   // px equivalent of 50%
-      zIndex:       2,
-    });
-
-    // Target: inset rounded rectangle below the header.
-    // 24 px radius matches the site's card design language.
     var inset   = 16;
-    var headerH = 48;    // nav h-12 = 48 px
-    var tgtLeft   = inset;
-    var tgtTop    = headerH + inset / 2;
-    var tgtWidth  = window.innerWidth  - inset * 2;
-    var tgtHeight = window.innerHeight - headerH - inset * 1.5;
+    var headerH = 48;   // nav h-12 = 48 px
+
+    // Initial circle: right half of hero, vertically centred.
+    function getInit() {
+      var size = Math.min(window.innerWidth * 0.5, 680);
+      return {
+        left:   window.innerWidth * 0.5,
+        top:    window.innerHeight * 0.5 - size * 0.5,
+        size:   size,
+        radius: size / 2,
+      };
+    }
+
+    // Target: inset rounded rectangle filling the viewport below the header.
+    // 28 px radius — proportional to large containers, elegant at any size.
+    var cornerRadius = 28;
+    function getTgt() {
+      return {
+        left:   inset,
+        top:    headerH + inset / 2,
+        width:  window.innerWidth  - inset * 2,
+        height: window.innerHeight - headerH - inset * 1.5,
+        radius: cornerRadius,
+      };
+    }
+
+    // Apply initial state (also called onRefresh so resize recalculates it).
+    function applyInit() {
+      var iv = getInit();
+      gsap.set(container, {
+        left:         iv.left,
+        top:          iv.top,
+        width:        iv.size,
+        height:       iv.size,
+        borderRadius: iv.radius,   // px equivalent of 50% — avoids unit-mix artefact
+        zIndex:       2,
+      });
+    }
+
+    applyInit();
 
     var tl = gsap.timeline();
 
     // Fade scroll hint
     if (scrollHint) tl.to(scrollHint, { opacity: 0, duration: 0.2, ease: 'none' }, 0);
 
-    // Blur + fade hero text — ease:none so progress maps 1-to-1 with scroll
+    // Blur + fade hero text
     tl.to(heroText, {
       opacity:  0,
       filter:   'blur(18px)',
@@ -56,16 +80,14 @@ export function initHeroAnimation() {
       duration: 0.6,
     }, 0);
 
-    // Expand circle → centred inset rounded rectangle.
-    // ease:none is correct for scrub tweens — scroll position is the easing.
-    // onUpdate calls updateSizes() directly (via __earthForceResize) so THREE.js
-    // re-renders at the new canvas dimensions on every animation frame.
+    // Morph circle → inset rounded rectangle.
+    // Function-based values are re-evaluated on every ScrollTrigger.refresh().
     tl.to(container, {
-      left:         tgtLeft,
-      top:          tgtTop,
-      width:        tgtWidth,
-      height:       tgtHeight,
-      borderRadius: 24,
+      left:         function() { return getTgt().left; },
+      top:          function() { return getTgt().top; },
+      width:        function() { return getTgt().width; },
+      height:       function() { return getTgt().height; },
+      borderRadius: function() { return getTgt().radius; },
       ease:         'none',
       duration:     1,
       onUpdate:     function() { if (window.__earthForceResize) window.__earthForceResize(); },
@@ -74,8 +96,6 @@ export function initHeroAnimation() {
     // Dwell: hold the expanded earth visible before the section scrolls away.
     tl.to({}, { duration: 1.2 });
 
-    // Pin the hero while the animation + dwell plays; the section then scrolls
-    // away normally and the next section rises naturally from below.
     ScrollTrigger.create({
       animation:           tl,
       trigger:             heroSec,
@@ -84,6 +104,7 @@ export function initHeroAnimation() {
       pin:                 true,
       scrub:               1,
       invalidateOnRefresh: true,
+      onRefresh:           applyInit,   // recalculate initial state on resize
     });
   });
 }
