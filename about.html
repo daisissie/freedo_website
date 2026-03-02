@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于我们 — 空间智能创新中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'Noto Sans SC', 'sans-serif'] },
+                    colors: { primary: '#3B82F6' }
+                }
+            }
+        }
+    </script>
+    <script src="./src/i18n/zh.js"></script>
+    <script src="./src/i18n/en.js"></script>
+</head>
+<body class="antialiased bg-white">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 top-0 transition-all duration-300" id="navbar">
+        <div class="px-4">
+            <div class="flex items-center justify-between h-16">
+                <a href="index.html" class="flex-shrink-0 cursor-pointer flex items-center gap-2.5">
+                    <span class="gradient-text-blue font-black text-xl tracking-tight" style="font-family:'Space Grotesk',sans-serif">Freedo</span>
+                    <span class="w-px h-4 bg-black/20 flex-shrink-0"></span>
+                    <span class="font-semibold text-gray-600 text-sm leading-tight" data-i18n="brand_main">空间智能创新中心</span>
+                </a>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="about.html" class="text-sm text-gray-900 font-medium transition-colors" data-i18n="nav_about">关于我们</a>
+                        <a href="index.html#scenarios" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_scenarios">应用场景</a>
+                        <a href="index.html#vision" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_vision">具身终端</a>
+                        <a href="index.html#cta" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_contact">合作联系</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 ml-4">
+                    <a href="demo.html" class="hidden md:inline-flex items-center px-4 py-1.5 rounded-full bg-primary text-white text-xs font-medium hover:bg-blue-600 transition-colors" data-i18n="cta_btn_primary">峥嵘大模型</a>
+                    <div class="flex items-center gap-1 rounded-full border border-black/10 bg-black/5 p-1">
+                        <button type="button" class="lang-toggle-btn px-3 py-1 text-xs rounded-full transition-colors" data-lang-set="zh">中</button>
+                        <button type="button" class="lang-toggle-btn px-3 py-1 text-xs rounded-full transition-colors" data-lang-set="en">EN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- About Content -->
+    <main class="pt-32 pb-24 px-6 max-w-3xl mx-auto">
+        <h1 class="text-4xl md:text-5xl font-black text-gray-900 mb-10 leading-tight" style="font-family:'Space Grotesk',sans-serif" data-i18n="about_heading">关于我们</h1>
+        <p class="text-lg text-gray-500 leading-relaxed" data-i18n="about_body">我们是一群深耕空间智能的工程师与研究者。我们构建从物理世界感知到三维生成的全栈技术，为无人机、机器人与自主系统提供高保真仿真训练数据，驱动下一代具身智能走遍真实世界。</p>
+    </main>
+
+    <!-- Logo Marquee -->
+    <div class="logo-marquee-wrapper">
+        <div class="logo-marquee-track">
+            <div class="logo-marquee-set">
+                <img src="./assets/logos/Columbia_coat_of_arms_no_crest.png" alt="Columbia">
+                <img src="./assets/logos/Harvard_University_coat_of_arms.svg.png" alt="Harvard">
+                <img src="./assets/logos/Huawei_Standard_logo.svg.png" alt="Huawei">
+                <img src="./assets/logos/Peking_University_seal.svg.png" alt="Peking University">
+                <img src="./assets/logos/Tencent_Cloud_logo.svg.png" alt="Tencent">
+                <img src="./assets/logos/UPenn_shield_with_banner.svg.png" alt="UPenn">
+            </div>
+            <div class="logo-marquee-set" aria-hidden="true">
+                <img src="./assets/logos/Columbia_coat_of_arms_no_crest.png" alt="">
+                <img src="./assets/logos/Harvard_University_coat_of_arms.svg.png" alt="">
+                <img src="./assets/logos/Huawei_Standard_logo.svg.png" alt="">
+                <img src="./assets/logos/Peking_University_seal.svg.png" alt="">
+                <img src="./assets/logos/Tencent_Cloud_logo.svg.png" alt="">
+                <img src="./assets/logos/UPenn_shield_with_banner.svg.png" alt="">
+            </div>
+            <div class="logo-marquee-set" aria-hidden="true">
+                <img src="./assets/logos/Columbia_coat_of_arms_no_crest.png" alt="">
+                <img src="./assets/logos/Harvard_University_coat_of_arms.svg.png" alt="">
+                <img src="./assets/logos/Huawei_Standard_logo.svg.png" alt="">
+                <img src="./assets/logos/Peking_University_seal.svg.png" alt="">
+                <img src="./assets/logos/Tencent_Cloud_logo.svg.png" alt="">
+                <img src="./assets/logos/UPenn_shield_with_banner.svg.png" alt="">
+            </div>
+            <div class="logo-marquee-set" aria-hidden="true">
+                <img src="./assets/logos/Columbia_coat_of_arms_no_crest.png" alt="">
+                <img src="./assets/logos/Harvard_University_coat_of_arms.svg.png" alt="">
+                <img src="./assets/logos/Huawei_Standard_logo.svg.png" alt="">
+                <img src="./assets/logos/Peking_University_seal.svg.png" alt="">
+                <img src="./assets/logos/Tencent_Cloud_logo.svg.png" alt="">
+                <img src="./assets/logos/UPenn_shield_with_banner.svg.png" alt="">
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initI18n } from './src/i18n/runtime.js';
+        initI18n();
+
+        // Navbar glass on scroll
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'border-b', 'border-black/5');
+            } else {
+                navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'border-b', 'border-black/5');
+            }
+        }, { passive: true });
+    </script>
+
+</body>
+</html>

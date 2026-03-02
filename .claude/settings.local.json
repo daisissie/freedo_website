@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -:*)"
+      "Bash(python3 -:*)",
+      "WebFetch(domain:piapi.ai)",
+      "WebFetch(domain:docs.fal.ai)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

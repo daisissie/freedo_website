@@ -2,7 +2,7 @@ window.SITE_I18N = window.SITE_I18N || {};
 
 // Copywriting is maintained here; adjust layout in index.html.
 window.SITE_I18N.en = {
-  page_title: 'Freedo AI Labs - Spatial Intelligence Infrastructure',
+  page_title: 'Innovation Center - Spatial Intelligence Infrastructure',
   hero_canvas_aria_label: '3D Particle Earth',
   brand_main: 'Spatial Intelligence Innovation Center',
   brand_suffix: '',
@@ -10,7 +10,7 @@ window.SITE_I18N.en = {
   nav_scenarios: 'Use Cases',
   nav_vision: 'Embodied Terminals',
   nav_contact: 'Collaborate',
-  hero_title: 'See the World<br><span class="gradient-text-blue">Know the World</span><br><span class="gradient-text">Roam the World</span>',
+  hero_title: 'See the World<br><span class="gradient-text-blue">Know the World</span><br><span class="gradient-text">Wonder the World</span>',
   hero_subtitle: 'Freedo builds a full-stack pipeline from physical-world perception to 3D generation, enabling intelligent simulation, next-generation human-computer interaction, and the training data they truly need.',
   hero_cta_tech: 'Explore Technology',
   hero_cta_demo: 'Interactive Demo',
@@ -18,10 +18,12 @@ window.SITE_I18N.en = {
   // Narrative
   narrative_text: 'The world is a collection of <strong>space and physics</strong>.<br>Read the space, grasp the laws, and you can make <em>predictions and decisions</em>.<br><br><span style="font-size:clamp(18px,2.4vw,30px);font-weight:600;color:var(--white)">We use <strong>generated worlds</strong> to train agents that navigate the world.</span>',
 
+  manifesto: 'We use <span style="color:var(--cyan)">generated worlds</span><br>to train agents that <span style="background:linear-gradient(135deg,var(--cyan),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">wonder the world</span>.',
+
   // Three Words Strip
-  tw1_num: '01 · DECONSTRUCT', tw1_zh: 'Deconstruct', tw1_en: 'SPATIAL MODELING',   tw1_stat_val: 'cm-level',   tw1_stat_lbl: 'Precision',
-  tw2_num: '02 · PERCEIVE',    tw2_zh: 'Perceive',     tw2_en: 'SPATIAL PERCEPTION', tw2_stat_val: '1B+',        tw2_stat_lbl: 'Parameters',
-  tw3_num: '03 · UNDERSTAND',  tw3_zh: 'Understand',   tw3_en: 'SPATIAL REASONING',  tw3_stat_val: 'Real-time',  tw3_stat_lbl: '3D Generation',
+  tw1_num: '01 · SEE',      tw1_zh: 'See',      tw1_en: 'SPATIAL PERCEPTION', tw1_stat_val: 'cm-level',   tw1_stat_lbl: 'Precision',
+  tw2_num: '02 · KNOW',     tw2_zh: 'Know',     tw2_en: 'SPATIAL COGNITION',  tw2_stat_val: '1B+',        tw2_stat_lbl: 'Parameters',
+  tw3_num: '03 · WONDER',   tw3_zh: 'Wonder', tw3_en: 'SPATIAL ACTION',     tw3_stat_val: 'Real-time',  tw3_stat_lbl: '3D Generation',
   tw_desc_1: 'High-precision digital models of the physical world — restoring material, structural, and thermal properties so machines can read reality from pixels.',
   tw_desc_2: '3D spatial perception beyond image recognition — fire spread, water levels, building structures: every detail of the world made visible.',
   tw_desc_3: 'From perception to simulation to decision-making — understanding physical laws, projecting future states, generating executable action plans.',
@@ -62,8 +64,13 @@ window.SITE_I18N.en = {
   tag_collaborate: 'COLLABORATE',
   cta_heading: 'Train world-aware agents<br>with <span style="color:var(--cyan)">generated worlds</span>',
   cta_lead: 'Whether you are a drone company, robotics R&D team, defense research institute, or autonomous systems lab — Freedo\'s spatial data and simulation capabilities are the training infrastructure you truly need.',
-  cta_btn_primary: 'Request a Demo',
+  cta_btn_primary: 'Create with ZhengRong',
   cta_btn_secondary: 'Learn More',
+
+  // About page
+  about_page_title: 'About — Innovation Center',
+  about_heading: 'About Us',
+  about_body: 'We are a group of engineers and researchers obsessed with spatial intelligence. We build a full-stack pipeline from physical-world perception to 3D generation, delivering high-fidelity simulation training data for drones, robots, and autonomous systems — empowering the next generation of embodied AI to wonder the real world.',
 
   // Footer
   footer_main: 'Freedo © 2025 &nbsp;·&nbsp; SPATIAL INTELLIGENCE',

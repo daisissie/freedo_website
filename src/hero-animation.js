@@ -26,7 +26,7 @@ export function initHeroAnimation() {
     container.style.borderRadius = (_preSize / 2) + 'px';
 
     var inset   = 16;
-    var headerH = 48;   // nav h-12 = 48 px
+    var headerH = 64;   // nav h-16 = 64 px
 
     // Initial circle position.
     // Desktop: right half of hero, vertically centred.
@@ -97,11 +97,29 @@ export function initHeroAnimation() {
       borderRadius: function() { return getTgt().radius; },
       ease:         'none',
       duration:     1,
-      onUpdate:     function() { if (window.__earthForceResize) window.__earthForceResize(); },
+      onUpdate:     function() {
+        if (window.__earthForceResize) window.__earthForceResize();
+        if (window.__earthSetCameraZ) {
+          // Interpolate camera z from 4.2 (circle) → 2.95 (full frame) as morph progresses
+          var p = this.progress();
+          window.__earthSetCameraZ(4.2 - (4.2 - 2.95) * p);
+        }
+      },
     }, 0);
 
-    // Dwell: hold the expanded earth visible before the section scrolls away.
-    tl.to({}, { duration: 1.2 });
+    // Dwell on full-size earth, then cross-fade to video.
+    var heroVideo = document.getElementById('hero-video');
+    tl.to('#earth-background', { autoAlpha: 0, duration: 0.5, ease: 'none' }, 1.8);
+    if (heroVideo) {
+      tl.fromTo('#hero-video',
+        { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.5, ease: 'none',
+          onStart: function() { heroVideo.play(); }
+        }, 1.8);
+    }
+
+    // Trailing dwell: hold video visible before section scrolls away.
+    tl.to({}, { duration: 0.8 });
 
     ScrollTrigger.create({
       animation:           tl,

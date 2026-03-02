@@ -15,7 +15,7 @@
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./src/style.css">
 
     <script>
@@ -57,21 +57,23 @@
 
     <!-- Navigation -->
     <nav class="fixed w-full z-50 top-0 transition-all duration-300" id="navbar">
-        <div class="max-w-7xl mx-auto px-6 lg:px-8">
-            <div class="flex items-center justify-between h-12">
-                <div class="flex-shrink-0 cursor-pointer flex items-center gap-2">
-                    <img src="./assets/freedo_logo.png" class="h-7 w-auto" alt="Freedo">
-                    <span class="font-semibold text-gray-900 text-base leading-tight" data-i18n="brand_main">空间智能创新中心</span>
+        <div class="px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0 cursor-pointer flex items-center gap-2.5">
+                    <span class="gradient-text-blue font-black text-xl tracking-tight" style="font-family:'Space Grotesk',sans-serif">Freedo</span>
+                    <span class="w-px h-4 bg-black/20 flex-shrink-0"></span>
+                    <span class="font-semibold text-gray-600 text-sm leading-tight" data-i18n="brand_main">空间智能创新中心</span>
                 </div>
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-8">
-                        <a href="#about" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_about">关于我们</a>
+                        <a href="about.html" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_about">关于我们</a>
                         <a href="#scenarios" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_scenarios">应用场景</a>
                         <a href="#vision" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_vision">具身终端</a>
                         <a href="#cta" class="text-sm text-gray-500 hover:text-gray-900 transition-colors" data-i18n="nav_contact">合作联系</a>
                     </div>
                 </div>
                 <div class="flex items-center gap-3 ml-4">
+                    <a href="demo.html" class="hidden md:inline-flex items-center px-4 py-1.5 rounded-full bg-primary text-white text-xs font-medium hover:bg-blue-600 transition-colors" data-i18n="cta_btn_primary">峥嵘大模型</a>
                     <div class="flex items-center gap-1 rounded-full border border-black/10 bg-black/5 p-1">
                         <button type="button" class="lang-toggle-btn px-3 py-1 text-xs rounded-full transition-colors" data-lang-set="zh">中</button>
                         <button type="button" class="lang-toggle-btn px-3 py-1 text-xs rounded-full transition-colors" data-lang-set="en">EN</button>
@@ -112,17 +114,6 @@
                         飞渡空间智能构建从物理世界感知到3D生成的全栈技术，赋能智能仿真与下一代人机交互，提供它们真正需要的训练数据。
                     </p>
 
-                    <div class="flex flex-wrap gap-4 reveal-up" style="transition-delay: 0.3s">
-                        <button class="magnetic-btn px-8 py-4 bg-primary hover:bg-blue-600 rounded-full font-medium transition-all duration-300 flex items-center gap-2 group">
-                            <span data-i18n="hero_cta_tech">探索技术</span>
-                            <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </button>
-                        <button class="magnetic-btn px-8 py-4 border border-black/15 hover:bg-black/5 rounded-full font-medium transition-all duration-300">
-                            <span data-i18n="hero_cta_demo">互动 Demo</span>
-                        </button>
-                    </div>
 
                 </div>
                 <!-- empty right column — earth shows through here -->
@@ -138,6 +129,9 @@
                     <img id="hero-fallback" class="earth-background-fallback" src="./assets/hero-fallback.svg" alt="">
                 </div>
             </div>
+            <video id="hero-video" muted loop playsinline>
+                <source src="./assets/proejct_video1.mp4" type="video/mp4">
+            </video>
         </div>
 
         <!-- Scroll indicator -->
@@ -151,17 +145,13 @@
 <!-- THREE WORDS STRIP -->
 <div class="three-words">
   <div class="narrative-full-row">
-    <div class="narrative-box reveal">
-      <p class="narrative-text" data-i18n-html="narrative_text">
-        世界是<strong>空间与物理的集合</strong>。<br>
-        读懂空间，掌握规律，才能做出<em>预测与决策</em>。<br><br>
-        <span style="font-size:clamp(18px,2.4vw,30px);white-space:normal;font-weight:600;color:var(--white)">我们用<strong>生成的世界</strong>，训练走遍世界的智能体。</span>
-      </p>
-    </div>
+    <p data-i18n-html="manifesto" style="font-size:clamp(32px,5.5vw,88px);font-weight:900;line-height:1.15;letter-spacing:-0.02em;font-family:'Noto Serif SC',serif;max-width:14em;text-align:center">
+      我们用<span style="color:var(--cyan)">生成的世界</span>，<br>训练<span style="background:linear-gradient(135deg,var(--cyan),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">走遍世界</span>的智能体。
+    </p>
   </div>
   <div class="tw-item reveal">
-    <div class="tw-num" data-i18n="tw1_num">01 · DECONSTRUCT</div>
-    <div class="tw-zh" data-i18n="tw1_zh">解构世界</div>
+    <div class="tw-num" data-i18n="tw1_num">01 · SEE</div>
+    <div class="tw-zh" data-i18n="tw1_zh">看见世界</div>
     <div class="tw-en" data-i18n="tw1_en">SPATIAL MODELING</div>
     <div class="tw-desc" data-i18n="tw_desc_1">构建物理世界的高精度数字模型，还原材质、结构、热学属性，让机器从像素读懂现实。</div>
     <div class="tw-stat">
@@ -171,8 +161,8 @@
     <div class="tw-bar"></div>
   </div>
   <div class="tw-item reveal">
-    <div class="tw-num" data-i18n="tw2_num">02 · SEE</div>
-    <div class="tw-zh" data-i18n="tw2_zh">看见世界</div>
+    <div class="tw-num" data-i18n="tw2_num">02 · KNOW</div>
+    <div class="tw-zh" data-i18n="tw2_zh">认识世界</div>
     <div class="tw-en" data-i18n="tw2_en">SPATIAL PERCEPTION</div>
     <div class="tw-desc" data-i18n="tw_desc_2">超越图像识别的三维空间感知，火势、水位、建筑结构，世界的每一个细节都清晰可见。</div>
     <div class="tw-stat">
@@ -182,8 +172,8 @@
     <div class="tw-bar"></div>
   </div>
   <div class="tw-item reveal">
-    <div class="tw-num" data-i18n="tw3_num">03 · UNDERSTAND</div>
-    <div class="tw-zh" data-i18n="tw3_zh">理解世界</div>
+    <div class="tw-num" data-i18n="tw3_num">03 · WONDER</div>
+    <div class="tw-zh" data-i18n="tw3_zh">走遍世界</div>
     <div class="tw-en" data-i18n="tw3_en">SPATIAL REASONING</div>
     <div class="tw-desc" data-i18n="tw_desc_3">从感知到仿真到决策，理解物理规律，推演未来状态，生成可执行的行动方案。</div>
     <div class="tw-stat">
@@ -712,8 +702,7 @@
       无论你是无人机企业、机器人研发团队、国防科研机构还是自主系统实验室，飞渡的空间数据与仿真能力，是你最需要的训练基础设施。
     </p>
     <div class="cta-btns reveal">
-      <button class="btn-primary" data-i18n="cta_btn_primary">申请合作演示</button>
-      <button class="btn-secondary" data-i18n="cta_btn_secondary">了解技术方案</button>
+      <a href="demo.html" class="btn-primary" data-i18n="cta_btn_primary">峥嵘大模型</a>
     </div>
   </div>
 </div>

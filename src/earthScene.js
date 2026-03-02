@@ -893,7 +893,7 @@ export function initEarthHero({
 
   const scene  = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 20);
-  camera.position.set(0, 0.1, 2.95);
+  camera.position.set(0, 0.1, 4.2);
 
   renderer.toneMapping        = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.94;
@@ -1400,6 +1400,7 @@ export function initEarthHero({
   // Expose so GSAP animation can trigger a resize without firing a window
   // resize event (which would cause ScrollTrigger to recalculate on every frame).
   window.__earthForceResize = function() { updateSizes(); composer.render(); };
+  window.__earthSetCameraZ  = function(z) { camera.position.z = z; };
   canvas.addEventListener('pointerdown',  handlePointerDown);
   canvas.addEventListener('pointermove',  handlePointerMove);
   canvas.addEventListener('pointerleave', handlePointerLeave);

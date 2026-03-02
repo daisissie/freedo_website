@@ -24,3 +24,6 @@ lerna-debug.log*
 
 # Local overrides
 *.local
+
+# API keys — never commit
+config.js

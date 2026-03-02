@@ -2,7 +2,7 @@ window.SITE_I18N = window.SITE_I18N || {};
 
 // 文案统一维护在这里；页面结构请修改 index.html。
 window.SITE_I18N.zh = {
-  page_title: 'Freedo AI Labs - 空间智能基础设施',
+  page_title: '空间智能创新中心 - 空间智能基础设施',
   hero_canvas_aria_label: '3D 粒子地球',
   brand_main: '空间智能创新中心',
   brand_suffix: '',
@@ -18,10 +18,12 @@ window.SITE_I18N.zh = {
   // Narrative
   narrative_text: '世界是<strong>空间与物理的集合</strong>。<br>读懂空间，掌握规律，才能做出<em>预测与决策</em>。<br><br><span style="font-size:clamp(18px,2.4vw,30px);font-weight:600;color:var(--white)">我们用<strong>生成的世界</strong>，训练走遍世界的智能体。</span>',
 
+  manifesto: '我们用<span style="color:var(--cyan)">生成的世界</span>，<br>训练<span style="background:linear-gradient(135deg,var(--cyan),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">走遍世界</span>的智能体。',
+
   // Three Words Strip
-  tw1_num: '01 · 解构', tw1_zh: '解构世界', tw1_en: '空间建模', tw1_stat_val: '厘米级', tw1_stat_lbl: '重建精度',
-  tw2_num: '02 · 看见', tw2_zh: '看见世界', tw2_en: '空间感知', tw2_stat_val: '10亿+', tw2_stat_lbl: '参数规模',
-  tw3_num: '03 · 理解', tw3_zh: '理解世界', tw3_en: '空间推理', tw3_stat_val: '实时',   tw3_stat_lbl: '3D生成',
+  tw1_num: '01 · 看见', tw1_zh: '看见世界', tw1_en: '空间感知', tw1_stat_val: '厘米级', tw1_stat_lbl: '重建精度',
+  tw2_num: '02 · 认识', tw2_zh: '认识世界', tw2_en: '空间认知', tw2_stat_val: '10亿+', tw2_stat_lbl: '参数规模',
+  tw3_num: '03 · 走遍', tw3_zh: '走遍世界', tw3_en: '空间行动', tw3_stat_val: '实时',   tw3_stat_lbl: '3D生成',
   tw_desc_1: '构建物理世界的高精度数字模型，还原材质、结构、热学属性，让机器从像素读懂现实。',
   tw_desc_2: '超越图像识别的三维空间感知，火势、水位、建筑结构，世界的每一个细节都清晰可见。',
   tw_desc_3: '从感知到仿真到决策，理解物理规律，推演未来状态，生成可执行的行动方案。',
@@ -62,8 +64,13 @@ window.SITE_I18N.zh = {
   tag_collaborate: '合作联系',
   cta_heading: '用生成的世界，<br>训练<span style="color:var(--cyan)">认识世界</span>的智能体',
   cta_lead: '无论你是无人机企业、机器人研发团队、国防科研机构还是自主系统实验室，飞渡的空间数据与仿真能力，是你最需要的训练基础设施。',
-  cta_btn_primary: '申请合作演示',
+  cta_btn_primary: '峥嵘大模型',
   cta_btn_secondary: '了解技术方案',
+
+  // About page
+  about_page_title: '关于我们 — 空间智能创新中心',
+  about_heading: '关于我们',
+  about_body: '我们是一群深耕空间智能的工程师与研究者。我们构建从物理世界感知到三维生成的全栈技术，为无人机、机器人与自主系统提供高保真仿真训练数据，驱动下一代具身智能走遍真实世界。',
 
   // Footer
   footer_main: '飞渡科技 © 2025 &nbsp;·&nbsp; 空间智能',

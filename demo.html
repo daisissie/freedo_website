@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trellis · 峥嵘大模型 — Freedo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Local API key config (gitignored, never committed) -->
+    <script src="./config.js"></script>
+    <!-- Three.js for GLB rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+    /* ── Variables ──────────────────────────────────────────── */
+    :root {
+        --app-bg:       #090B10;
+        --panel-bg:     #0E1016;
+        --surface:      rgba(255,255,255,0.04);
+        --surface-hover:rgba(255,255,255,0.07);
+        --border:       rgba(255,255,255,0.07);
+        --border-hi:    rgba(255,255,255,0.13);
+        --accent:       #3B7EFF;
+        --accent-hover: #5593FF;
+        --accent-glow:  rgba(59,126,255,0.3);
+        --success:      #34C759;
+        --warning:      #FF9F0A;
+        --text:         #EEF0F7;
+        --text-2:       rgba(238,240,247,0.55);
+        --text-3:       rgba(238,240,247,0.3);
+        --header-h:     64px;
+        --footer-h:     64px;
+        --left-w:       384px;
+        --r-sm:         6px;
+        --r-md:         10px;
+        --r-lg:         14px;
+        --sidebar-w:    72px;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+        height: 100%;
+        font-family: 'Inter', 'Noto Sans SC', sans-serif;
+        background: var(--app-bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+        font-size: 13px;
+    }
+
+    /* ═══ HEADER ════════════════════════════════════════════════ */
+    .app-header {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: var(--header-h);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 18px;
+        background: rgba(9,11,16,0.88);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border-bottom: 1px solid var(--border);
+    }
+
+    /* Brand */
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        text-decoration: none;
+        flex-shrink: 0;
+        min-width: 140px;
+    }
+    .brand-wordmark {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .brand-sep {
+        width: 1px;
+        height: 18px;
+        background: var(--border-hi);
+        flex-shrink: 0;
+    }
+    .brand-model {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+    .brand-model-zh {
+        font-family: 'Noto Serif SC', serif;
+        font-size: 14px;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.15;
+    }
+    .brand-model-en {
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text-3);
+        white-space: nowrap;
+        line-height: 1.15;
+    }
+    .brand-tagline {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1;
+        color: var(--text-2);
+        white-space: nowrap;
+        letter-spacing: -0.01em;
+    }
+
+    /* App sidebar */
+    .app-sidebar {
+        position: fixed;
+        top: var(--header-h);
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-w);
+        background: var(--panel-bg);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 6px;
+        gap: 2px;
+        z-index: 90;
+        overflow: hidden;
+    }
+    .sidebar-tab {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 10px 4px;
+        border-radius: var(--r-md);
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text-3);
+        cursor: pointer;
+        transition: all 0.15s;
+        border: none;
+        background: transparent;
+        font-family: inherit;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+    }
+    .sidebar-tab:hover { color: var(--text-2); background: var(--surface); }
+    .sidebar-tab.active {
+        background: rgba(59,126,255,0.1);
+        color: var(--accent);
+    }
+    .sidebar-tab svg { width: 18px; height: 18px; }
+
+    /* Right area */
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 140px;
+        justify-content: flex-end;
+    }
+    .back-link {
+        font-size: 11.5px;
+        color: var(--text-3);
+        text-decoration: none;
+        transition: color 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .back-link:hover { color: var(--text-2); }
+    .avatar {
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3B7EFF 0%, #06B6D4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: #fff;
+        cursor: pointer;
+        border: 1.5px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+    }
+
+    /* ═══ APP LAYOUT ═════════════════════════════════════════════ */
+    .app-body {
+        position: fixed;
+        top: var(--header-h);
+        left: var(--sidebar-w); right: 0;
+        bottom: var(--footer-h);
+        display: grid;
+        grid-template-columns: var(--left-w) 1fr;
+        overflow: hidden;
+    }
+
+    /* ═══ LEFT PANEL ════════════════════════════════════════════ */
+    .left-panel {
+        background: var(--panel-bg);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.08) transparent;
+    }
+    .left-panel::-webkit-scrollbar { width: 3px; }
+    .left-panel::-webkit-scrollbar-track { background: transparent; }
+    .left-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    .p-section {
+        padding: 18px 18px 0;
+    }
+    .p-section + .p-section {
+        border-top: 1px solid var(--border);
+        margin-top: 18px;
+        padding-top: 18px;
+    }
+    .p-section:last-child { padding-bottom: 18px; }
+
+    .section-label {
+        font-size: 9.5px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-3);
+        margin-bottom: 11px;
+        font-family: 'Space Mono', monospace;
+    }
+
+    /* ── Dropzone ─────────────────────────────────────────────── */
+    .dropzone {
+        border: 1px dashed rgba(255,255,255,0.12);
+        border-radius: var(--r-md);
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        position: relative;
+        overflow: hidden;
+        background: rgba(255,255,255,0.015);
+    }
+    .dropzone:hover {
+        border-color: rgba(59,126,255,0.4);
+        background: rgba(59,126,255,0.04);
+    }
+    .dropzone.drag-over {
+        border-color: var(--accent);
+        background: rgba(59,126,255,0.08);
+    }
+    .dropzone.has-file {
+        border-style: solid;
+        border-color: rgba(255,255,255,0.09);
+    }
+    .dz-icon {
+        width: 38px; height: 38px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-3);
+        background: var(--surface);
+    }
+    .dz-icon svg { width: 16px; height: 16px; }
+    .dz-text {
+        font-size: 12px;
+        color: var(--text-2);
+        text-align: center;
+        line-height: 1.6;
+    }
+    .dz-text em { color: var(--accent); font-style: normal; font-weight: 500; }
+    .dz-hint {
+        font-size: 10px;
+        color: var(--text-3);
+        font-family: 'Space Mono', monospace;
+    }
+    /* File preview */
+    .dz-preview {
+        position: absolute;
+        inset: 0;
+        display: none;
+    }
+    .dz-preview img {
+        width: 100%; height: 100%;
+        object-fit: cover;
+    }
+    .dz-preview-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 45%);
+        display: flex;
+        align-items: flex-end;
+        padding: 10px;
+    }
+    .dz-filename {
+        font-size: 10px;
+        color: rgba(255,255,255,0.65);
+        font-family: 'Space Mono', monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    .dz-remove {
+        position: absolute;
+        top: 8px; right: 8px;
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.55);
+        border: 1px solid rgba(255,255,255,0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s;
+        color: rgba(255,255,255,0.8);
+    }
+    .dz-remove:hover { background: rgba(255,69,58,0.7); }
+    .dz-remove svg { width: 9px; height: 9px; }
+    #file-input { display: none; }
+
+    /* ── Segmented control ─────────────────────────────────────── */
+    .seg {
+        display: flex;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--border);
+        border-radius: var(--r-sm);
+        padding: 2px;
+        gap: 2px;
+    }
+    .seg-btn {
+        flex: 1;
+        padding: 5px 0;
+        text-align: center;
+        font-size: 11.5px;
+        font-weight: 500;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-2);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.15s;
+        border: none;
+        background: transparent;
+    }
+    .seg-btn:hover { color: var(--text); }
+    .seg-btn.active {
+        background: rgba(255,255,255,0.09);
+        color: var(--text);
+    }
+
+    /* ── Seed row ──────────────────────────────────────────────── */
+    .seed-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .seed-input {
+        flex: 1;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--border);
+        border-radius: var(--r-sm);
+        padding: 6px 10px;
+        color: var(--text);
+        font-size: 12px;
+        font-family: 'Space Mono', monospace;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    .seed-input:focus { border-color: rgba(59,126,255,0.45); }
+    .seed-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .icon-btn {
+        width: 30px; height: 30px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: var(--text-2);
+        flex-shrink: 0;
+    }
+    .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
+    .icon-btn svg { width: 13px; height: 13px; }
+
+    /* ── Sliders ───────────────────────────────────────────────── */
+    .slider-row { margin-bottom: 14px; }
+    .slider-row:last-child { margin-bottom: 0; }
+    .slider-hdr {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 7px;
+    }
+    .slider-lbl { font-size: 12px; color: var(--text-2); }
+    .slider-val {
+        font-size: 10.5px;
+        font-family: 'Space Mono', monospace;
+        color: var(--accent);
+    }
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 2px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 1px;
+        outline: none;
+        cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 13px; height: 13px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+        box-shadow: 0 0 0 3px rgba(59,126,255,0.2);
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+        box-shadow: 0 0 0 4px rgba(59,126,255,0.3);
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 13px; height: 13px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        border: none;
+    }
+
+    /* ═══ PREVIEW WORKSPACE ══════════════════════════════════════ */
+    .preview-workspace {
+        display: flex;
+        flex-direction: column;
+        background: var(--app-bg);
+        overflow: hidden;
+    }
+
+    /* Stepper */
+    .stepper {
+        display: flex;
+        align-items: center;
+        padding: 13px 22px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255,255,255,0.01);
+        gap: 0;
+        flex-shrink: 0;
+    }
+    .step {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+    .step + .step {
+        margin-left: 0;
+    }
+    .step + .step::before {
+        content: '';
+        display: block;
+        width: 28px;
+        height: 1px;
+        background: var(--border);
+        margin: 0 10px;
+        flex-shrink: 0;
+    }
+    .step-num {
+        width: 21px; height: 21px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255,255,255,0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--text-3);
+        transition: all 0.25s;
+        flex-shrink: 0;
+    }
+    .step.active .step-num {
+        border-color: var(--accent);
+        background: rgba(59,126,255,0.14);
+        color: var(--accent);
+    }
+    .step.done .step-num {
+        border-color: var(--success);
+        background: rgba(52,199,89,0.14);
+        color: var(--success);
+    }
+    .step-lbl {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-3);
+        transition: color 0.25s;
+    }
+    .step.active .step-lbl { color: var(--text); }
+    .step.done .step-lbl { color: var(--text-2); }
+
+    /* Canvas area */
+    .canvas-area {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        /* dot-grid background */
+        background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+        background-size: 28px 28px;
+    }
+
+    /* all state panels fill canvas-area */
+    .state-panel {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+    .state-panel.visible { display: flex; }
+
+    /* Empty state */
+    .empty-icon {
+        width: 60px; height: 60px;
+        border: 1.5px dashed rgba(255,255,255,0.1);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-3);
+        margin-bottom: 16px;
+    }
+    .empty-icon svg { width: 26px; height: 26px; }
+    .empty-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-2);
+        margin-bottom: 8px;
+        text-align: center;
+    }
+    .empty-desc {
+        font-size: 12.5px;
+        color: var(--text-3);
+        line-height: 1.7;
+        text-align: center;
+        max-width: 280px;
+    }
+    .empty-desc strong { color: var(--text-2); font-weight: 500; }
+
+    /* Generating state */
+    #state-generating {
+        gap: 22px;
+    }
+    .gen-spinner {
+        width: 52px; height: 52px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.05);
+        border-top-color: var(--accent);
+        animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .gen-info { text-align: center; }
+    .gen-title {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-2);
+        margin-bottom: 4px;
+    }
+    .gen-substep {
+        font-size: 11px;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-3);
+    }
+    .gen-progress-wrap {
+        width: 220px;
+        height: 2px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 1px;
+        overflow: hidden;
+    }
+    .gen-progress-bar {
+        height: 100%;
+        background: linear-gradient(to right, var(--accent), #06C8E4);
+        border-radius: 1px;
+        width: 0%;
+        transition: width 0.25s ease;
+    }
+    .gen-pct {
+        font-size: 11px;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-3);
+    }
+
+    /* Mesh viewport (generated state) */
+    #state-generated {
+        flex-direction: row;
+    }
+    #mesh-canvas {
+        display: block;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Mesh HUD */
+    .mesh-hud {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0;
+        background: rgba(9,11,16,0.82);
+        backdrop-filter: blur(14px);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        overflow: hidden;
+    }
+    .mesh-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 8px 18px;
+    }
+    .mesh-stat + .mesh-stat {
+        border-left: 1px solid var(--border);
+    }
+    .mesh-stat-val {
+        font-size: 12.5px;
+        font-weight: 600;
+        font-family: 'Space Mono', monospace;
+        color: var(--text);
+    }
+    .mesh-stat-lbl {
+        font-size: 9.5px;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+    }
+
+    /* Preview toolbar */
+    .preview-toolbar {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .preview-toolbar.visible { display: flex; }
+    .tb-btn {
+        width: 30px; height: 30px;
+        border-radius: 7px;
+        background: rgba(9,11,16,0.82);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        color: var(--text-2);
+    }
+    .tb-btn:hover { background: var(--surface-hover); color: var(--text); }
+    .tb-btn.active { border-color: var(--accent); color: var(--accent); }
+    .tb-btn svg { width: 13px; height: 13px; }
+
+    /* ═══ ACTION BAR ════════════════════════════════════════════ */
+    .action-bar {
+        position: fixed;
+        bottom: 0; left: var(--sidebar-w); right: 0;
+        height: var(--footer-h);
+        background: rgba(9,11,16,0.90);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 22px;
+        z-index: 100;
+    }
+    .action-status {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+    .status-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.16);
+        flex-shrink: 0;
+        transition: background 0.3s, box-shadow 0.3s;
+    }
+    .status-dot.ready   { background: var(--accent);  box-shadow: 0 0 8px var(--accent-glow); }
+    .status-dot.running { background: var(--warning);  animation: dot-blink 1s ease-in-out infinite; }
+    .status-dot.done    { background: var(--success);  box-shadow: 0 0 8px rgba(52,199,89,0.4); }
+    @keyframes dot-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+    .status-text {
+        font-size: 11.5px;
+        color: var(--text-2);
+        font-family: 'Space Mono', monospace;
+    }
+
+    .action-btns { display: flex; gap: 9px; align-items: center; }
+
+    /* Extract button */
+    .btn-extract {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 18px;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-2);
+        font-size: 12.5px;
+        font-weight: 500;
+        border: 1px solid var(--border-hi);
+        cursor: pointer;
+        transition: all 0.18s;
+        font-family: inherit;
+    }
+    .btn-extract:hover:not(:disabled) {
+        background: var(--surface-hover);
+        color: var(--text);
+        border-color: rgba(255,255,255,0.18);
+    }
+    .btn-extract:disabled { opacity: 0.28; cursor: not-allowed; }
+    .btn-extract svg { width: 12px; height: 12px; }
+    .btn-extract .btn-spin {
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255,255,255,0.18);
+        border-top-color: var(--text);
+        animation: spin 0.6s linear infinite;
+        display: none;
+    }
+    .btn-extract.loading .btn-spin { display: block; }
+    .btn-extract.loading .extract-icon { display: none; }
+
+    /* Generate button */
+    .btn-generate {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 20px;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.18s;
+        font-family: inherit;
+    }
+    .btn-generate:hover:not(:disabled) {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(59,126,255,0.35);
+    }
+    .btn-generate:active:not(:disabled) { transform: translateY(0); }
+    .btn-generate:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-generate svg { width: 13px; height: 13px; }
+    .btn-generate .btn-spin {
+        width: 13px; height: 13px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255,255,255,0.25);
+        border-top-color: #fff;
+        animation: spin 0.6s linear infinite;
+        display: none;
+    }
+    .btn-generate.loading .btn-spin { display: block; }
+    .btn-generate.loading .gen-icon { display: none; }
+
+    /* ─── Toast ────────────────────────────────────────────────── */
+    .toast {
+        position: fixed;
+        bottom: calc(var(--footer-h) + 14px);
+        left: 50%;
+        transform: translateX(-50%) translateY(6px);
+        background: rgba(14,16,22,0.95);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--border-hi);
+        border-radius: 8px;
+        padding: 9px 16px;
+        font-size: 11.5px;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-2);
+        z-index: 200;
+        opacity: 0;
+        transition: all 0.22s ease;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ═══ TAB PANELS ════════════════════════════════════════════ */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: grid; }    /* Create uses grid */
+
+    #panel-explore.active,
+    #panel-library.active {
+        position: fixed;
+        top: var(--header-h); left: var(--sidebar-w); right: 0; bottom: var(--footer-h);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.08) transparent;
+        background: var(--app-bg);
+    }
+
+    /* Shared inner padding */
+    .tab-inner {
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 28px 28px 40px;
+    }
+
+    /* Search bar */
+    .search-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 9px 14px;
+        margin-bottom: 24px;
+    }
+    .search-bar svg { width: 15px; height: 15px; color: var(--text-3); flex-shrink: 0; }
+    .search-bar input {
+        flex: 1;
+        background: none;
+        border: none;
+        outline: none;
+        color: var(--text);
+        font-size: 13px;
+        font-family: inherit;
+    }
+    .search-bar input::placeholder { color: var(--text-3); }
+    .search-bar kbd {
+        font-size: 10px;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-3);
+        border: 1px solid var(--border-hi);
+        border-radius: 4px;
+        padding: 2px 6px;
+        flex-shrink: 0;
+    }
+
+    /* Filter tags */
+    .filter-strip {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+    .filter-tag {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        color: var(--text-2);
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+    }
+    .filter-tag:hover { border-color: var(--border-hi); color: var(--text); }
+    .filter-tag.active {
+        border-color: var(--accent);
+        background: rgba(59,126,255,0.12);
+        color: var(--accent);
+    }
+
+    /* Card grid */
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 14px;
+    }
+
+    /* Explore image thumbnails */
+    .explore-thumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.3s;
+    }
+    .model-card:hover .explore-thumb { transform: scale(1.04); }
+    .explore-use-btn {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.45);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        opacity: 0;
+        transition: opacity 0.18s;
+        backdrop-filter: blur(2px);
+    }
+    .model-card:hover .explore-use-btn { opacity: 1; }
+
+    .model-card {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        cursor: pointer;
+        transition: border-color 0.18s, transform 0.18s;
+    }
+    .model-card:hover {
+        border-color: var(--border-hi);
+        transform: translateY(-2px);
+    }
+    .model-card-thumb {
+        aspect-ratio: 1 / 1;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* CSS mesh sphere thumb */
+    .mesh-thumb {
+        width: 72px; height: 72px;
+        border-radius: 50%;
+        border: 1px solid rgba(59,126,255,0.25);
+        position: relative;
+        flex-shrink: 0;
+    }
+    .mesh-thumb::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 32%, rgba(59,126,255,0.18) 0%, transparent 60%),
+                    radial-gradient(circle at 65% 68%, rgba(6,182,212,0.12) 0%, transparent 50%);
+        border: 1px solid rgba(59,126,255,0.15);
+    }
+    .mesh-thumb::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 50%;
+        border: 1px dashed rgba(59,126,255,0.1);
+    }
+    .model-card-thumb-bg {
+        position: absolute; inset: 0;
+        background: radial-gradient(circle at 50% 40%, rgba(59,126,255,0.07) 0%, transparent 65%);
+    }
+    /* Accent colour variants */
+    .model-card:nth-child(3n) .mesh-thumb {
+        border-color: rgba(6,182,212,0.25);
+    }
+    .model-card:nth-child(3n) .mesh-thumb::before {
+        background: radial-gradient(circle at 35% 32%, rgba(6,182,212,0.18) 0%, transparent 60%);
+    }
+    .model-card:nth-child(5n) .mesh-thumb {
+        border-color: rgba(168,85,247,0.25);
+    }
+    .model-card:nth-child(5n) .mesh-thumb::before {
+        background: radial-gradient(circle at 35% 32%, rgba(168,85,247,0.18) 0%, transparent 60%);
+    }
+
+    .model-card-info {
+        padding: 11px 13px 13px;
+        border-top: 1px solid var(--border);
+    }
+    .model-card-name {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .model-card-meta {
+        font-size: 10.5px;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .model-card-meta span { color: var(--text-2); }
+
+    /* Section heading inside tabs */
+    .tab-section-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+    .tab-section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .tab-section-count {
+        font-size: 11px;
+        font-family: 'Space Mono', monospace;
+        color: var(--text-3);
+    }
+
+    /* Library empty state */
+    .lib-empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        text-align: center;
+        min-height: 300px;
+    }
+    .lib-empty-icon {
+        width: 52px; height: 52px;
+        border: 1.5px dashed rgba(255,255,255,0.08);
+        border-radius: 13px;
+        display: flex; align-items: center; justify-content: center;
+        color: var(--text-3);
+    }
+    .lib-empty-icon svg { width: 22px; height: 22px; }
+    .lib-empty-title { font-size: 14px; font-weight: 600; color: var(--text-2); }
+    .lib-empty-desc { font-size: 12px; color: var(--text-3); line-height: 1.7; max-width: 260px; }
+
+    /* Action bar hide on other tabs */
+    .action-bar.tab-hidden .action-btns { display: none; }
+
+    /* ─── Responsive ───────────────────────────────────────────── */
+    @media (max-width: 768px) {
+        :root { --left-w: 100%; }
+        body { overflow-y: auto; }
+        .app-body {
+            position: relative;
+            top: var(--header-h);
+            bottom: auto;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            height: auto;
+        }
+        .left-panel { border-right: none; border-bottom: 1px solid var(--border); overflow: visible; }
+        .preview-workspace { min-height: 480px; }
+        .app-sidebar { display: none; }
+        .app-body, #panel-explore.active, #panel-library.active, .action-bar { left: 0; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ══════════════════════════════════════════════════ -->
+<header class="app-header">
+    <a href="index.html" class="brand">
+        <span class="brand-wordmark">Freedo</span>
+        <span class="brand-sep"></span>
+        <span class="brand-tagline">空间智能创新中心</span>
+        <span class="brand-sep"></span>
+        <span class="brand-model">
+            <span class="brand-model-zh">峥嵘大模型</span>
+            <span class="brand-model-en">3D Asset with ZhengRong</span>
+        </span>
+    </a>
+
+    <div class="header-right">
+        <a href="index.html" class="back-link">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+            Back
+        </a>
+        <div class="avatar">FD</div>
+    </div>
+</header>
+
+<!-- ═══ APP SIDEBAR ═════════════════════════════════════════════ -->
+<nav class="app-sidebar">
+    <button class="sidebar-tab active" data-tab="create">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        <span>Create</span>
+    </button>
+    <button class="sidebar-tab" data-tab="explore">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+        </svg>
+        <span>Explore</span>
+    </button>
+    <button class="sidebar-tab" data-tab="library">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/>
+        </svg>
+        <span>Library</span>
+    </button>
+</nav>
+
+<!-- ═══ APP BODY ════════════════════════════════════════════════ -->
+<div class="app-body tab-panel active" id="app-body" data-panel="create">
+
+    <!-- ─── Left Panel ──────────────────────────────────────── -->
+    <aside class="left-panel">
+
+        <!-- Upload -->
+        <div class="p-section">
+            <p class="section-label">Input Image</p>
+            <div class="dropzone" id="dropzone">
+                <div class="dz-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/>
+                    </svg>
+                </div>
+                <div class="dz-text"><em>Click to upload</em> or drag &amp; drop</div>
+                <div class="dz-hint">PNG · JPG · WEBP · max 10 MB</div>
+
+                <!-- File preview (hidden until file selected) -->
+                <div class="dz-preview" id="dz-preview">
+                    <img id="preview-img" src="" alt="">
+                    <div class="dz-preview-overlay">
+                        <span class="dz-filename" id="preview-filename"></span>
+                    </div>
+                </div>
+
+                <!-- Remove file -->
+                <button class="dz-remove" id="dz-remove" style="display:none" title="Remove">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp">
+        </div>
+
+        <!-- Resolution -->
+        <div class="p-section">
+            <p class="section-label">Resolution</p>
+            <div class="seg" id="resolution-seg">
+                <button class="seg-btn" data-value="512">512</button>
+                <button class="seg-btn active" data-value="1024">1024</button>
+                <button class="seg-btn" data-value="1536">1536</button>
+            </div>
+        </div>
+
+        <!-- Seed -->
+        <div class="p-section">
+            <p class="section-label">Seed</p>
+            <div class="seed-row">
+                <input class="seed-input" type="number" id="seed-input" value="42" min="0" max="2147483647" placeholder="0">
+                <button class="icon-btn" id="btn-random-seed" title="Randomize">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mesh Settings -->
+        <div class="p-section">
+            <p class="section-label">Mesh Settings</p>
+
+            <div class="slider-row">
+                <div class="slider-hdr">
+                    <span class="slider-lbl">Foreground Ratio</span>
+                    <span class="slider-val" id="val-fg">0.85</span>
+                </div>
+                <input type="range" id="sl-fg" min="50" max="100" value="85" step="1">
+            </div>
+
+            <div class="slider-row">
+                <div class="slider-hdr">
+                    <span class="slider-lbl">Decimation Target</span>
+                    <span class="slider-val" id="val-simplify">0.95</span>
+                </div>
+                <input type="range" id="sl-simplify" min="0" max="100" value="95" step="1">
+            </div>
+
+            <div class="slider-row">
+                <div class="slider-hdr">
+                    <span class="slider-lbl">Texture Size</span>
+                    <span class="slider-val" id="val-tex">0.50</span>
+                </div>
+                <input type="range" id="sl-tex" min="0" max="100" value="50" step="1">
+            </div>
+
+            <div class="slider-row">
+                <div class="slider-hdr">
+                    <span class="slider-lbl">Sparse Structure Steps</span>
+                    <span class="slider-val" id="val-sparse">12</span>
+                </div>
+                <input type="range" id="sl-sparse" min="1" max="50" value="12" step="1">
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ─── Preview Workspace ────────────────────────────────── -->
+    <main class="preview-workspace">
+
+        <!-- Stepper -->
+        <div class="stepper" id="stepper">
+            <div class="step active" id="step-1">
+                <div class="step-num">1</div>
+                <span class="step-lbl">Preview</span>
+            </div>
+            <div class="step" id="step-2">
+                <div class="step-num">2</div>
+                <span class="step-lbl">Extract</span>
+            </div>
+        </div>
+
+        <!-- Canvas area -->
+        <div class="canvas-area">
+
+            <!-- Empty state -->
+            <div class="state-panel visible" id="state-empty">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M21 7.5l-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                    </svg>
+                </div>
+                <div class="empty-title">No model yet</div>
+                <div class="empty-desc">Upload an image on the left and click <strong>Generate</strong> to create a 3D mesh.</div>
+            </div>
+
+            <!-- Generating state -->
+            <div class="state-panel" id="state-generating">
+                <div class="gen-spinner"></div>
+                <div class="gen-info">
+                    <div class="gen-title">Generating 3D Mesh</div>
+                    <div class="gen-substep" id="gen-substep">Initializing model…</div>
+                </div>
+                <div class="gen-progress-wrap">
+                    <div class="gen-progress-bar" id="gen-bar"></div>
+                </div>
+                <div class="gen-pct" id="gen-pct">0%</div>
+            </div>
+
+            <!-- Generated / mesh state -->
+            <div class="state-panel" id="state-generated">
+                <canvas id="mesh-canvas"></canvas>
+
+                <!-- Mesh stats HUD -->
+                <div class="mesh-hud">
+                    <div class="mesh-stat">
+                        <span class="mesh-stat-val" id="hud-verts">24.3K</span>
+                        <span class="mesh-stat-lbl">Vertices</span>
+                    </div>
+                    <div class="mesh-stat">
+                        <span class="mesh-stat-val" id="hud-faces">48.6K</span>
+                        <span class="mesh-stat-lbl">Faces</span>
+                    </div>
+                    <div class="mesh-stat">
+                        <span class="mesh-stat-val" id="hud-tex">1024 px</span>
+                        <span class="mesh-stat-lbl">Texture</span>
+                    </div>
+                    <div class="mesh-stat">
+                        <span class="mesh-stat-val" id="hud-size">2.4 MB</span>
+                        <span class="mesh-stat-lbl">Est. size</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating toolbar (shown when mesh is visible) -->
+            <div class="preview-toolbar" id="preview-toolbar">
+                <button class="tb-btn active" id="tb-orbit" title="Orbit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>
+                    </svg>
+                </button>
+                <button class="tb-btn" id="tb-wireframe" title="Wireframe">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 7.5l-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                    </svg>
+                </button>
+                <button class="tb-btn" id="tb-zoom" title="Reset view">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- ═══ EXPLORE PANEL ════════════════════════════════════════════ -->
+<div id="panel-explore" class="tab-panel">
+    <div class="tab-inner">
+        <!-- Search -->
+        <div class="search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+            </svg>
+            <input type="text" placeholder="Search prompts, objects, scenes…">
+            <kbd>⌘K</kbd>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-strip">
+            <button class="filter-tag active">All</button>
+            <button class="filter-tag">Objects</button>
+            <button class="filter-tag">Architecture</button>
+            <button class="filter-tag">Nature</button>
+            <button class="filter-tag">Characters</button>
+            <button class="filter-tag">Vehicles</button>
+        </div>
+
+        <!-- Featured grid -->
+        <div class="tab-section-heading">
+            <span class="tab-section-title">Featured Examples</span>
+            <span class="tab-section-count">24 models</span>
+        </div>
+        <div class="card-grid" id="explore-grid"></div>
+    </div>
+</div>
+
+<!-- ═══ LIBRARY PANEL ════════════════════════════════════════════ -->
+<div id="panel-library" class="tab-panel">
+    <div class="tab-inner">
+        <div class="tab-section-heading">
+            <span class="tab-section-title">Your Library</span>
+            <span class="tab-section-count" id="lib-count">0 models</span>
+        </div>
+        <div id="lib-content"></div>
+    </div>
+</div>
+
+<!-- ═══ ACTION BAR ══════════════════════════════════════════════ -->
+<div class="action-bar">
+    <div class="action-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span class="status-text" id="status-text">No image selected</span>
+    </div>
+    <div class="action-btns">
+        <button class="btn-extract" id="btn-extract" disabled>
+            <span class="extract-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+            </span>
+            <span class="btn-spin"></span>
+            Export GLB
+        </button>
+        <button class="btn-generate" id="btn-generate" disabled>
+            <span class="gen-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+                    <path d="M18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+                </svg>
+            </span>
+            <span class="btn-spin"></span>
+            Generate
+        </button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   STATE MACHINE
+   States: idle | file-selected | generating | generated | exporting
+   ═══════════════════════════════════════════════════════════════ */
+const STATE = { IDLE:'idle', FILE:'file', GENERATING:'generating', GENERATED:'generated', EXPORTING:'exporting' };
+let state = STATE.IDLE;
+let selectedFile = null;
+let genTimer = null;
+let meshAngle = 0;
+let meshRaf = null;
+let wireframe = false;
+
+/* ── FAL.AI CONFIG ─────────────────────────────────────────── */
+const FAL_KEY = window.FAL_KEY || ''; // loaded from config.js (gitignored)
+let lastGlbUrl = null;
+
+/* ── fal.ai: upload image to get a public URL ──────────────── */
+async function uploadToFal(file) {
+    const initRes = await fetch('https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3', {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_name: file.name, content_type: file.type })
+    });
+    if (!initRes.ok) throw new Error('Upload init failed (' + initRes.status + ')');
+    const { upload_url, file_url } = await initRes.json();
+    const putRes = await fetch(upload_url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+    if (!putRes.ok) throw new Error('File upload failed (' + putRes.status + ')');
+    return file_url;
+}
+
+/* ── fal.ai: submit TRELLIS.2 job to queue ─────────────────── */
+async function submitTrellis(imageUrl) {
+    const texIdx = Math.round(document.getElementById('sl-tex').value / 100 * 2);
+    const texSize = [1024, 2048, 4096][texIdx];
+    const decTarget = Math.round((document.getElementById('sl-simplify').value / 100) * 1995000 + 5000);
+    const sparseStr = +(document.getElementById('sl-sparse').value / 5).toFixed(1); // 0–50 → 0–10
+    const resolution = +document.querySelector('#resolution-seg .seg-btn.active').dataset.value;
+    const seed = +document.getElementById('seed-input').value || undefined;
+
+    const res = await fetch('https://queue.fal.run/fal-ai/trellis-2', {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_url: imageUrl, resolution, seed, decimation_target: decTarget,
+                               texture_size: texSize, ss_guidance_strength: sparseStr, remesh: true })
+    });
+    if (!res.ok) throw new Error('Queue submit failed (' + res.status + ')');
+    const { request_id } = await res.json();
+    return request_id;
+}
+
+/* ── fal.ai: poll until done, return GLB url ───────────────── */
+async function pollTrellis(requestId) {
+    for (;;) {
+        await new Promise(r => setTimeout(r, 2500));
+        const res = await fetch(`https://queue.fal.run/fal-ai/trellis-2/requests/${requestId}/status`, {
+            headers: { 'Authorization': `Key ${FAL_KEY}` }
+        });
+        if (!res.ok) throw new Error('Status check failed (' + res.status + ')');
+        const data = await res.json();
+        if (data.queue_position != null) genSubstep.textContent = 'Queue position: ' + data.queue_position + '…';
+        if (data.status === 'COMPLETED') {
+            const resultRes = await fetch(`https://queue.fal.run/fal-ai/trellis-2/requests/${requestId}`, {
+                headers: { 'Authorization': `Key ${FAL_KEY}` }
+            });
+            const result = await resultRes.json();
+            return result.model_glb.url;
+        }
+        if (data.status === 'FAILED') throw new Error(data.error || 'Generation failed');
+    }
+}
+
+// DOM
+const dropzone      = document.getElementById('dropzone');
+const fileInput     = document.getElementById('file-input');
+const dzPreview     = document.getElementById('dz-preview');
+const previewImg    = document.getElementById('preview-img');
+const previewFname  = document.getElementById('preview-filename');
+const dzRemove      = document.getElementById('dz-remove');
+const btnGenerate   = document.getElementById('btn-generate');
+const btnExtract    = document.getElementById('btn-extract');
+const statusDot     = document.getElementById('status-dot');
+const statusText    = document.getElementById('status-text');
+const stEmpty       = document.getElementById('state-empty');
+const stGenerating  = document.getElementById('state-generating');
+const stGenerated   = document.getElementById('state-generated');
+const genBar        = document.getElementById('gen-bar');
+const genPct        = document.getElementById('gen-pct');
+const genSubstep    = document.getElementById('gen-substep');
+const step1         = document.getElementById('step-1');
+const step2         = document.getElementById('step-2');
+const toolbar       = document.getElementById('preview-toolbar');
+const meshCanvas    = document.getElementById('mesh-canvas');
+const toast         = document.getElementById('toast');
+
+/* ── Controls ──────────────────────────────────────────────── */
+
+// Segmented controls
+document.querySelectorAll('.seg').forEach(seg => {
+    seg.querySelectorAll('.seg-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            seg.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+});
+
+// Sliders
+document.getElementById('sl-fg').addEventListener('input', e => {
+    document.getElementById('val-fg').textContent = (e.target.value / 100).toFixed(2);
+});
+document.getElementById('sl-simplify').addEventListener('input', e => {
+    document.getElementById('val-simplify').textContent = (e.target.value / 100).toFixed(2);
+});
+document.getElementById('sl-tex').addEventListener('input', e => {
+    const ratio = (e.target.value / 100).toFixed(2);
+    document.getElementById('val-tex').textContent = ratio;
+    document.getElementById('hud-tex').textContent = ratio;
+});
+document.getElementById('sl-sparse').addEventListener('input', e => {
+    document.getElementById('val-sparse').textContent = e.target.value;
+});
+
+// Seed randomizer
+document.getElementById('btn-random-seed').addEventListener('click', () => {
+    document.getElementById('seed-input').value = Math.floor(Math.random() * 2147483647);
+});
+
+/* ── File upload ───────────────────────────────────────────── */
+dropzone.addEventListener('click', e => {
+    if (e.target.closest('.dz-remove')) return;
+    fileInput.click();
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+dzRemove.addEventListener('click', e => { e.stopPropagation(); clearFile(); });
+
+function loadFile(file) {
+    if (!file.type.match(/image\/(png|jpeg|webp)/)) { showToast('Unsupported format — use PNG, JPG or WEBP.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast('File too large — max 10 MB.'); return; }
+    selectedFile = file;
+    previewImg.src = URL.createObjectURL(file);
+    previewFname.textContent = file.name;
+    dzPreview.style.display = 'block';
+    dzRemove.style.display = 'flex';
+    dropzone.classList.add('has-file');
+    setState(STATE.FILE);
+}
+
+function clearFile() {
+    selectedFile = null;
+    previewImg.src = '';
+    dzPreview.style.display = 'none';
+    dzRemove.style.display = 'none';
+    dropzone.classList.remove('has-file');
+    fileInput.value = '';
+    setState(STATE.IDLE);
+}
+
+/* ── setState ──────────────────────────────────────────────── */
+function setState(s) {
+    state = s;
+
+    // Reset UI atoms
+    btnGenerate.disabled = false;
+    btnGenerate.classList.remove('loading');
+    btnExtract.disabled = true;
+    btnExtract.classList.remove('loading');
+    statusDot.className = 'status-dot';
+    toolbar.classList.remove('visible');
+
+    // Hide all panels
+    stEmpty.classList.remove('visible');
+    stGenerating.classList.remove('visible');
+    stGenerated.classList.remove('visible');
+
+    // Steps
+    step1.className = 'step';
+    step2.className = 'step';
+
+    switch (s) {
+        case STATE.IDLE:
+            stEmpty.classList.add('visible');
+            statusText.textContent = 'No image selected';
+            btnGenerate.disabled = true;
+            step1.classList.add('active');
+            break;
+
+        case STATE.FILE:
+            stEmpty.classList.add('visible');
+            statusDot.classList.add('ready');
+            statusText.textContent = 'Ready · ' + (selectedFile ? trimName(selectedFile.name) : '');
+            step1.classList.add('active');
+            break;
+
+        case STATE.GENERATING:
+            stGenerating.classList.add('visible');
+            statusDot.classList.add('running');
+            statusText.textContent = 'Generating mesh…';
+            btnGenerate.disabled = true;
+            btnGenerate.classList.add('loading');
+            step1.classList.add('active');
+            break;
+
+        case STATE.GENERATED:
+            stGenerated.classList.add('visible');
+            toolbar.classList.add('visible');
+            statusDot.classList.add('done');
+            statusText.textContent = 'Mesh ready';
+            btnExtract.disabled = false;
+            step1.classList.add('done');
+            step2.classList.add('active');
+            break;
+
+        case STATE.EXPORTING:
+            stGenerated.classList.add('visible');
+            toolbar.classList.add('visible');
+            statusDot.classList.add('running');
+            statusText.textContent = 'Exporting GLB…';
+            btnExtract.disabled = true;
+            btnExtract.classList.add('loading');
+            step1.classList.add('done');
+            step2.classList.add('active');
+            break;
+    }
+}
+
+function trimName(n) { return n.length > 28 ? n.slice(0, 26) + '…' : n; }
+
+/* ── Generate simulation ───────────────────────────────────── */
+const GEN_STEPS = [
+    'Preprocessing image…',
+    'Running sparse structure…',
+    'Building dense point cloud…',
+    'Constructing mesh topology…',
+    'Projecting textures…',
+    'Finalizing geometry…',
+];
+
+btnGenerate.addEventListener('click', async () => {
+    if (state !== STATE.FILE && state !== STATE.GENERATED) return;
+    disposeThree();
+    setState(STATE.GENERATING);
+    genBar.style.width = '5%'; genPct.textContent = '5%';
+    genSubstep.textContent = 'Uploading image…';
+
+    try {
+        const imageUrl = await uploadToFal(selectedFile);
+        genBar.style.width = '20%'; genPct.textContent = '20%';
+        genSubstep.textContent = 'Submitting to TRELLIS.2…';
+
+        const requestId = await submitTrellis(imageUrl);
+        genBar.style.width = '30%'; genPct.textContent = '30%';
+        genSubstep.textContent = 'Generating 3D mesh…';
+
+        // Animate progress bar while waiting for the model
+        let fakeProgress = 30;
+        const progressTimer = setInterval(() => {
+            if (fakeProgress < 88) { fakeProgress += Math.random() * 1.2 + 0.3; }
+            genBar.style.width = fakeProgress.toFixed(1) + '%';
+            genPct.textContent = Math.round(fakeProgress) + '%';
+        }, 1200);
+
+        const glbUrl = await pollTrellis(requestId);
+        clearInterval(progressTimer);
+        lastGlbUrl = glbUrl;
+
+        genBar.style.width = '100%'; genPct.textContent = '100%';
+        genSubstep.textContent = 'Complete ✓';
+        await new Promise(r => setTimeout(r, 380));
+        setState(STATE.GENERATED);
+        loadGLBIntoCanvas(glbUrl);
+
+    } catch (err) {
+        setState(state === STATE.GENERATING ? STATE.FILE : state);
+        showToast('Error: ' + err.message);
+    }
+});
+
+function randomizeStats() {
+    const v = (18 + Math.random() * 40).toFixed(1);
+    document.getElementById('hud-verts').textContent = v + 'K';
+    document.getElementById('hud-faces').textContent = (v * 2).toFixed(1) + 'K';
+    const mb = (1.2 + Math.random() * 3).toFixed(1);
+    document.getElementById('hud-size').textContent = mb + ' MB';
+}
+
+/* ── Export: download real GLB ─────────────────────────────── */
+btnExtract.addEventListener('click', async () => {
+    if (state !== STATE.GENERATED || !lastGlbUrl) return;
+    setState(STATE.EXPORTING);
+    try {
+        const res = await fetch(lastGlbUrl);
+        if (!res.ok) throw new Error('Download failed (' + res.status + ')');
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'mesh_' + Date.now() + '.glb';
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        setState(STATE.GENERATED);
+        showToast('GLB downloaded ↓');
+        const verts = document.getElementById('hud-verts').textContent;
+        const ts = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        libraryItems.unshift({ name: 'Mesh_' + ts, meta: verts + ' · GLB', glbUrl: lastGlbUrl });
+        refreshLibrary();
+    } catch (err) {
+        setState(STATE.GENERATED);
+        showToast('Export failed: ' + err.message);
+    }
+});
+
+/* ── Tab nav ───────────────────────────────────────────────── */
+const panelCreate  = document.getElementById('app-body');
+const panelExplore = document.getElementById('panel-explore');
+const panelLibrary = document.getElementById('panel-library');
+const actionBar    = document.querySelector('.action-bar');
+
+const PANELS = { create: panelCreate, explore: panelExplore, library: panelLibrary };
+
+function switchTab(tabId) {
+    document.querySelectorAll('.sidebar-tab').forEach(x => x.classList.remove('active'));
+    document.querySelector(`.sidebar-tab[data-tab="${tabId}"]`).classList.add('active');
+
+    Object.values(PANELS).forEach(p => p.classList.remove('active'));
+    PANELS[tabId].classList.add('active');
+
+    // Show/hide action bar buttons on non-create tabs
+    if (tabId === 'create') {
+        actionBar.classList.remove('tab-hidden');
+    } else {
+        actionBar.classList.add('tab-hidden');
+        actionBar.querySelector('.status-text').textContent =
+            tabId === 'library' ? 'Library 展厅' : 'Explore examples';
+        actionBar.querySelector('.status-dot').className = 'status-dot';
+    }
+}
+
+document.querySelectorAll('.sidebar-tab').forEach(t => {
+    t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// Filter tags (Explore)
+document.querySelectorAll('.filter-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+        tag.closest('.filter-strip').querySelectorAll('.filter-tag').forEach(x => x.classList.remove('active'));
+        tag.classList.add('active');
+        const cat = tag.textContent.trim();
+        document.querySelectorAll('#explore-grid .model-card').forEach(card => {
+            card.style.display = (cat === 'All' || card.dataset.cat === cat) ? '' : 'none';
+        });
+    });
+});
+
+// Load example image from URL into Create tab
+async function loadFromUrl(url, name) {
+    try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const ext = blob.type.includes('png') ? 'png' : 'jpg';
+        const file = new File([blob], name.replace(/\s+/g, '_') + '.' + ext, { type: blob.type });
+        loadFile(file);
+    } catch {
+        showToast('Could not load image — check your connection.');
+    }
+}
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+document.getElementById('tb-wireframe').addEventListener('click', function() {
+    wireframe = !wireframe;
+    this.classList.toggle('active', wireframe);
+    document.getElementById('tb-orbit').classList.toggle('active', !wireframe);
+    if (threeCtx) {
+        threeCtx.scene.traverse(c => { if (c.isMesh) c.material.wireframe = wireframe; });
+    }
+});
+
+document.getElementById('tb-orbit').addEventListener('click', function() {
+    if (threeCtx) {
+        threeCtx.controls.autoRotate = !threeCtx.controls.autoRotate;
+        this.classList.toggle('active', threeCtx.controls.autoRotate);
+    }
+});
+
+/* ── Toast ─────────────────────────────────────────────────── */
+let toastTimer;
+function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+/* ── Three.js GLB renderer ───────────────────────────────── */
+let threeCtx = null; // { renderer, scene, camera, controls, animId, ro }
+
+function disposeThree() {
+    if (!threeCtx) return;
+    cancelAnimationFrame(threeCtx.animId);
+    threeCtx.ro.disconnect();
+    threeCtx.renderer.dispose();
+    threeCtx = null;
+}
+
+function loadGLBIntoCanvas(url) {
+    disposeThree();
+    const canvas = meshCanvas;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+
+    const scene = new THREE.Scene();
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    sun.position.set(3, 5, 4);
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x9ab8ff, 0.5);
+    fill.position.set(-4, -2, -3);
+    scene.add(fill);
+
+    const parent = stGenerated;
+    const camera = new THREE.PerspectiveCamera(40, parent.clientWidth / parent.clientHeight, 0.001, 500);
+    const controls = new THREE.OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.7;
+
+    new THREE.GLTFLoader().load(url, gltf => {
+        // Centre and fit model
+        const box = new THREE.Box3().setFromObject(gltf.scene);
+        const centre = box.getCenter(new THREE.Vector3());
+        const size   = box.getSize(new THREE.Vector3()).length();
+        gltf.scene.position.sub(centre);
+        camera.position.set(0, size * 0.25, size * 1.6);
+        controls.target.set(0, 0, 0);
+        scene.add(gltf.scene);
+
+        // Update HUD with real counts
+        let verts = 0, tris = 0;
+        gltf.scene.traverse(c => {
+            if (c.isMesh) {
+                verts += c.geometry.attributes.position.count;
+                tris  += c.geometry.index ? c.geometry.index.count / 3
+                                          : c.geometry.attributes.position.count / 3;
+            }
+        });
+        document.getElementById('hud-verts').textContent = (verts / 1000).toFixed(1) + 'K';
+        document.getElementById('hud-faces').textContent = (tris  / 1000).toFixed(1) + 'K';
+        statusText.textContent = 'Mesh ready · ' + (verts / 1000).toFixed(1) + 'K verts';
+    }, undefined, err => showToast('GLB load error: ' + err.message));
+
+    function resize() {
+        const w = parent.clientWidth, h = parent.clientHeight;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+    }
+    const ro = new ResizeObserver(resize);
+    ro.observe(parent);
+    resize();
+
+    function animate() {
+        threeCtx.animId = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    threeCtx = { renderer, scene, camera, controls, animId: null, ro };
+    animate();
+}
+
+/* ── Legacy canvas stub (kept for STATE compatibility) ───── */
+function stopMeshCanvas() {
+    if (meshRaf) { cancelAnimationFrame(meshRaf); meshRaf = null; }
+}
+
+function startMeshCanvas() {
+    stopMeshCanvas();
+    const canvas = meshCanvas;
+    const ctx = canvas.getContext('2d');
+    meshAngle = 0;
+
+    function resize() {
+        const rect = stGenerated.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = rect.width  * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(stGenerated);
+    resize();
+
+    function frame() {
+        const w = canvas.width  / (window.devicePixelRatio || 1);
+        const h = canvas.height / (window.devicePixelRatio || 1);
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const R  = Math.min(w, h) * 0.30;
+
+        meshAngle += 0.006;
+
+        // Outer glow
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.8);
+        grd.addColorStop(0, 'rgba(59,126,255,0.05)');
+        grd.addColorStop(1, 'rgba(59,126,255,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, w, h);
+
+        const TILT = 0.42;
+
+        // Latitude rings
+        const LAT = 10;
+        for (let i = 0; i <= LAT; i++) {
+            const lat = (i / LAT) * Math.PI - Math.PI / 2;
+            const r   = Math.cos(lat) * R;
+            const y3  = Math.sin(lat) * R;
+            if (r < 1) continue;
+            const projY = cy + y3 * Math.cos(TILT);
+            const alpha = wireframe ? 0.22 : (0.07 + 0.12 * Math.abs(Math.cos(lat)));
+            ctx.beginPath();
+            ctx.ellipse(cx, projY, r, r * 0.38, meshAngle * 0.18, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(59,126,255,${alpha})`;
+            ctx.lineWidth = wireframe ? 0.6 : 0.55;
+            ctx.stroke();
+        }
+
+        // Longitude lines
+        const LON = 18;
+        for (let i = 0; i < LON; i++) {
+            const lon = (i / LON) * Math.PI * 2 + meshAngle;
+            const pts = [];
+            for (let j = 0; j <= 56; j++) {
+                const lat = (j / 56) * Math.PI - Math.PI / 2;
+                const x3  = Math.cos(lat) * Math.cos(lon) * R;
+                const y3  = Math.sin(lat) * R;
+                const z3  = Math.cos(lat) * Math.sin(lon) * R;
+                const py  = cy + (y3 * Math.cos(TILT) - z3 * Math.sin(TILT));
+                pts.push([cx + x3, py, z3]);
+            }
+            const front = Math.cos(lon + meshAngle * 0) > -0.15;
+            const alpha = wireframe ? (front ? 0.28 : 0.08) : (front ? 0.18 : 0.04);
+            ctx.beginPath();
+            ctx.moveTo(pts[0][0], pts[0][1]);
+            for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+            ctx.strokeStyle = `rgba(59,126,255,${alpha})`;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+        }
+
+        // Equator accent
+        if (!wireframe) {
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, R, R * 0.38, meshAngle * 0.18, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(59,126,255,0.4)';
+            ctx.lineWidth = 0.9;
+            ctx.stroke();
+        }
+
+        // Vertex dots
+        const DOT_N = 28;
+        for (let i = 0; i < DOT_N; i++) {
+            const lon2 = (i / DOT_N) * Math.PI * 2 + meshAngle;
+            const lat2 = Math.sin(i * 1.9 + 0.4) * 1.1;
+            const x3   = Math.cos(lat2) * Math.cos(lon2) * R;
+            const y3   = Math.sin(lat2) * R;
+            const z3   = Math.cos(lat2) * Math.sin(lon2) * R;
+            const py   = cy + (y3 * Math.cos(TILT) - z3 * Math.sin(TILT));
+            if (z3 < -R * 0.05) continue;
+            const intensity = (z3 / R + 1) / 2;
+            const a = wireframe ? 0.8 : (0.35 + 0.65 * intensity);
+            ctx.beginPath();
+            ctx.arc(cx + x3, py, 1.4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(80,190,255,${a})`;
+            ctx.fill();
+        }
+
+        meshRaf = requestAnimationFrame(frame);
+    }
+
+    frame();
+}
+
+/* ── Populate Explore grid ─────────────────────────────────── */
+const EXPLORE_ITEMS = [
+    { name: 'Garden Chair',     cat: 'Objects',      url: 'https://picsum.photos/seed/chair01/400/400'    },
+    { name: 'Ceramic Vase',     cat: 'Objects',      url: 'https://picsum.photos/seed/vase02/400/400'     },
+    { name: 'Stone Arch',       cat: 'Architecture', url: 'https://picsum.photos/seed/arch03/400/400'     },
+    { name: 'Wooden Bench',     cat: 'Objects',      url: 'https://picsum.photos/seed/bench04/400/400'    },
+    { name: 'Bronze Figurine',  cat: 'Characters',   url: 'https://picsum.photos/seed/figure05/400/400'   },
+    { name: 'Glass Bottle',     cat: 'Objects',      url: 'https://picsum.photos/seed/bottle06/400/400'   },
+    { name: 'Terracotta Pot',   cat: 'Objects',      url: 'https://picsum.photos/seed/pot07/400/400'      },
+    { name: 'Iron Lantern',     cat: 'Objects',      url: 'https://picsum.photos/seed/lantern08/400/400'  },
+    { name: 'Mountain Rock',    cat: 'Nature',       url: 'https://picsum.photos/seed/rock09/400/400'     },
+    { name: 'Wicker Basket',    cat: 'Objects',      url: 'https://picsum.photos/seed/basket10/400/400'   },
+    { name: 'Marble Column',    cat: 'Architecture', url: 'https://picsum.photos/seed/column11/400/400'   },
+    { name: 'Wooden Stool',     cat: 'Objects',      url: 'https://picsum.photos/seed/stool12/400/400'    },
+    { name: 'Old Car',          cat: 'Vehicles',     url: 'https://picsum.photos/seed/car13/400/400'      },
+    { name: 'Autumn Tree',      cat: 'Nature',       url: 'https://picsum.photos/seed/tree14/400/400'     },
+    { name: 'Stone Bridge',     cat: 'Architecture', url: 'https://picsum.photos/seed/bridge15/400/400'   },
+    { name: 'Motorbike',        cat: 'Vehicles',     url: 'https://picsum.photos/seed/moto16/400/400'     },
+];
+
+(function buildExplore() {
+    const grid = document.getElementById('explore-grid');
+    document.getElementById('explore-grid').closest('.tab-inner')
+        .querySelector('.tab-section-count').textContent = EXPLORE_ITEMS.length + ' images';
+
+    EXPLORE_ITEMS.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'model-card';
+        card.dataset.cat = item.cat;
+        card.innerHTML = `
+            <div class="model-card-thumb">
+                <img class="explore-thumb" src="${item.url}" alt="${item.name}" loading="lazy">
+                <div class="explore-use-btn">Use in Create →</div>
+            </div>
+            <div class="model-card-info">
+                <div class="model-card-name">${item.name}</div>
+                <div class="model-card-meta">${item.cat}</div>
+            </div>`;
+        card.addEventListener('click', () => {
+            loadFromUrl(item.url, item.name);
+            switchTab('create');
+        });
+        grid.appendChild(card);
+    });
+})();
+
+/* ── Populate Library ──────────────────────────────────────── */
+let libraryItems = [];
+
+function refreshLibrary() {
+    const content = document.getElementById('lib-content');
+    document.getElementById('lib-count').textContent = libraryItems.length + ' models';
+    if (libraryItems.length === 0) {
+        content.innerHTML = `
+            <div class="lib-empty">
+                <div class="lib-empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+                        <path d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v8.25A2.25 2.25 0 0 0 4.5 16.5h15a2.25 2.25 0 0 0 2.25-2.25V8.25A2.25 2.25 0 0 0 19.5 6h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
+                    </svg>
+                </div>
+                <div class="lib-empty-title">Library is empty</div>
+                <div class="lib-empty-desc">Generate and export a model — it will appear here automatically.</div>
+            </div>`;
+    } else {
+        const grid = document.createElement('div');
+        grid.className = 'card-grid';
+        libraryItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'model-card';
+            card.innerHTML = `
+                <div class="model-card-thumb">
+                    <div class="model-card-thumb-bg"></div>
+                    <div class="mesh-thumb"></div>
+                </div>
+                <div class="model-card-info">
+                    <div class="model-card-name">${item.name}</div>
+                    <div class="model-card-meta">${item.meta}</div>
+                </div>`;
+            grid.appendChild(card);
+        });
+        content.innerHTML = '';
+        content.appendChild(grid);
+    }
+}
+
+refreshLibrary();
+
+// Init
+setState(STATE.IDLE);
+</script>
+</body>
+</html>
