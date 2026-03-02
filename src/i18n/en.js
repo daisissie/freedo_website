@@ -2,14 +2,15 @@ window.SITE_I18N = window.SITE_I18N || {};
 
 // Copywriting is maintained here; adjust layout in index.html.
 window.SITE_I18N.en = {
-  page_title: 'Freedo AI Lab - Spatial Intelligence Infrastructure',
+  page_title: 'Freedo AI Labs - Spatial Intelligence Infrastructure',
   hero_canvas_aria_label: '3D Particle Earth',
-  brand_main: 'Freedo',
-  brand_suffix: 'AI Lab',
+  brand_main: 'Spatial Intelligence Innovation Center',
+  brand_suffix: '',
+  nav_about: 'About',
   nav_scenarios: 'Use Cases',
   nav_vision: 'Embodied Terminals',
   nav_contact: 'Collaborate',
-  hero_title: 'Deconstruct the World<br><span class="gradient-text-blue">Perceive the World</span><br><span class="gradient-text">Understand the World</span>',
+  hero_title: 'See the World<br><span class="gradient-text-blue">Know the World</span><br><span class="gradient-text">Roam the World</span>',
   hero_subtitle: 'Freedo builds a full-stack pipeline from physical-world perception to 3D generation, enabling intelligent simulation, next-generation human-computer interaction, and the training data they truly need.',
   hero_cta_tech: 'Explore Technology',
   hero_cta_demo: 'Interactive Demo',

@@ -2,14 +2,15 @@ window.SITE_I18N = window.SITE_I18N || {};
 
 // 文案统一维护在这里；页面结构请修改 index.html。
 window.SITE_I18N.zh = {
-  page_title: 'Freedo AI Lab - 空间智能基础设施',
+  page_title: 'Freedo AI Labs - 空间智能基础设施',
   hero_canvas_aria_label: '3D 粒子地球',
-  brand_main: 'Freedo',
-  brand_suffix: 'AI Lab',
+  brand_main: '空间智能创新中心',
+  brand_suffix: '',
+  nav_about: '关于我们',
   nav_scenarios: '应用场景',
   nav_vision: '具身终端',
   nav_contact: '合作联系',
-  hero_title: '解构世界<br><span class="gradient-text-blue">看见世界</span><br><span class="gradient-text">理解世界</span>',
+  hero_title: '看见世界<br><span class="gradient-text-blue">认识世界</span><br><span class="gradient-text">走遍世界</span>',
   hero_subtitle: '飞渡空间智能构建从物理世界感知到3D生成的全栈技术，赋能智能仿真与下一代人机交互，提供它们真正需要的训练数据。',
   hero_cta_tech: '探索技术',
   hero_cta_demo: '互动 Demo',

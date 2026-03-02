@@ -1,3 +1,24 @@
+function initRevealAnimations() {
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  reveals.forEach(el => observer.observe(el));
+
+  // Stagger children within containers
+  document.querySelectorAll('.four-layers, .scenarios-grid, .three-words, .carriers-grid').forEach(container => {
+    const children = container.querySelectorAll(':scope > .reveal');
+    children.forEach((child, i) => {
+      child.style.transitionDelay = `${i * 0.1}s`;
+    });
+  });
+}
+
 function initScrollAnimations() {
   if (!window.gsap || !window.ScrollTrigger) return;
 
@@ -139,6 +160,7 @@ function initIntroDropdown() {
 }
 
 export function initInteractions() {
+  initRevealAnimations();
   initScrollAnimations();
   initNavbarGlass();
   initMagneticButtons();

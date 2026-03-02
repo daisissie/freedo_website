@@ -1393,6 +1393,13 @@ export function initEarthHero({
     updateDisperseFromScroll();
     syncLoopState();
   });
+
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(updateSizes).observe(hero);
+  }
+  // Expose so GSAP animation can trigger a resize without firing a window
+  // resize event (which would cause ScrollTrigger to recalculate on every frame).
+  window.__earthForceResize = function() { updateSizes(); composer.render(); };
   canvas.addEventListener('pointerdown',  handlePointerDown);
   canvas.addEventListener('pointermove',  handlePointerMove);
   canvas.addEventListener('pointerleave', handlePointerLeave);
