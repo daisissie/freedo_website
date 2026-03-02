@@ -159,6 +159,34 @@ function initIntroDropdown() {
   setOpen(false);
 }
 
+function initMobileMenu() {
+  const btn   = document.getElementById('mobile-menu-btn');
+  const menu  = document.getElementById('mobile-menu');
+  if (!btn || !menu) return;
+
+  const bars = btn.querySelectorAll('span');
+
+  const setOpen = (open) => {
+    menu.classList.toggle('hidden', !open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    // Animate bars into X
+    bars[0].style.transform = open ? 'translateY(8px) rotate(45deg)' : '';
+    bars[1].style.opacity   = open ? '0' : '';
+    bars[2].style.transform = open ? 'translateY(-8px) rotate(-45deg)' : '';
+  };
+
+  btn.addEventListener('click', () => {
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    setOpen(!isOpen);
+  });
+
+  // Close on link click or outside tap
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setOpen(false)));
+  document.addEventListener('click', (e) => {
+    if (!btn.contains(e.target) && !menu.contains(e.target)) setOpen(false);
+  });
+}
+
 export function initInteractions() {
   initRevealAnimations();
   initScrollAnimations();
@@ -166,4 +194,5 @@ export function initInteractions() {
   initMagneticButtons();
   initSmoothScroll();
   initIntroDropdown();
+  initMobileMenu();
 }

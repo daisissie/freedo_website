@@ -21,21 +21,28 @@ export function initHeroAnimation() {
 
     // Stamp a pixel border-radius immediately so the browser never renders
     // a frame with the default 0 (sharp corners) before GSAP applyInit runs.
-    var _preSize = Math.min(window.innerWidth * 0.5, 680);
+    var _isMobile = window.innerWidth < 768;
+    var _preSize  = _isMobile ? Math.min(window.innerWidth * 0.72, 340) : Math.min(window.innerWidth * 0.5, 680);
     container.style.borderRadius = (_preSize / 2) + 'px';
 
     var inset   = 16;
     var headerH = 48;   // nav h-12 = 48 px
 
-    // Initial circle: right half of hero, vertically centred.
+    // Initial circle position.
+    // Desktop: right half of hero, vertically centred.
+    // Mobile:  centred horizontally, in the lower 55% so it sits below the text.
     function getInit() {
-      var size = Math.min(window.innerWidth * 0.5, 680);
-      return {
-        left:   window.innerWidth * 0.5,
-        top:    window.innerHeight * 0.5 - size * 0.5,
-        size:   size,
-        radius: size / 2,
-      };
+      var isMobile = window.innerWidth < 768;
+      var size = isMobile
+        ? Math.min(window.innerWidth * 0.72, 340)
+        : Math.min(window.innerWidth * 0.5, 680);
+      var left = isMobile
+        ? (window.innerWidth - size) / 2
+        : window.innerWidth * 0.5;
+      var top = isMobile
+        ? window.innerHeight * 0.52 - size * 0.5
+        : window.innerHeight * 0.5 - size * 0.5;
+      return { left: left, top: top, size: size, radius: size / 2 };
     }
 
     // Target: inset rounded rectangle filling the viewport below the header.

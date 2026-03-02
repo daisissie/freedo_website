@@ -1015,3 +1015,37 @@ footer {
   .demo-portal__actions { width: 100%; }
   .demo-portal__link, .demo-portal__close { width: 100%; text-align: center; justify-content: center; }
 }
+
+/* ── Mobile (< 640px) ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Hero */
+  #hero-section { min-height: 100svh; padding-top: 64px; padding-bottom: 48px; }
+  #hero-text { text-align: left; }
+
+  /* Earth container: on mobile the circle sits in the lower-center of the hero
+     and the section needs enough height for text + globe to coexist */
+  #hero-section { min-height: 100svh; }
+
+  /* Buttons */
+  .btn-primary, .btn-secondary { padding: 12px 24px; font-size: 12px; }
+
+  /* Sections */
+  .narrative-box { padding: 32px 20px; }
+  .narrative-text { font-size: clamp(15px, 4vw, 18px); }
+  .tw-item { padding: 32px 20px; }
+  .tw-zh { font-size: 28px; }
+  .tw-stat-value { font-size: 22px; }
+  .solution-section, .scenarios-section { padding-left: 16px; padding-right: 16px; }
+  .vision-section { padding: 60px 16px; }
+  .cta-section { padding: 80px 16px; }
+  .cta-btns { flex-direction: column; align-items: center; }
+  footer { padding: 24px 16px; }
+
+  /* Pipeline */
+  .pipeline-row { gap: 24px; }
+  .pipe-badge { font-size: 13px; padding: 8px 14px; }
+
+  /* Carriers */
+  .carrier-card { padding: 20px 16px; }
+  .carrier-title { font-size: 18px; }
+}
