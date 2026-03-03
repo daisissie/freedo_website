@@ -164,6 +164,26 @@
         min-width: 140px;
         justify-content: flex-end;
     }
+    .mode2-btn {
+        font-size: 12px;
+        color: var(--accent);
+        text-decoration: none;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border: 1px solid var(--accent);
+        border-radius: 6px;
+        background: rgba(59, 126, 255, 0.1);
+        font-weight: 500;
+    }
+    .mode2-btn:hover {
+        background: rgba(59, 126, 255, 0.2);
+        color: var(--accent-hover);
+        border-color: var(--accent-hover);
+        transform: translateY(-1px);
+    }
     .back-link {
         font-size: 11.5px;
         color: var(--text-3);
@@ -695,6 +715,17 @@
         padding: 0 22px;
         z-index: 100;
     }
+    .action-sync {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 11.5px;
+        color: var(--text-3);
+        font-family: 'Space Mono', monospace;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        pointer-events: none;
+    }
     .action-status {
         display: flex;
         align-items: center;
@@ -1070,4 +1101,5 @@
         .preview-workspace { min-height: 480px; }
         .app-sidebar { display: none; }
         .app-body, #panel-explore.active, #panel-library.active, .action-bar { left: 0; }
+        .action-sync { display: none; }
     }
