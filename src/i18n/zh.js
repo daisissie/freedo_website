@@ -73,6 +73,6 @@ window.SITE_I18N.zh = {
   about_body: '我们是一群深耕空间智能的工程师与研究者。我们构建从物理世界感知到三维生成的全栈技术，为无人机、机器人与自主系统提供高保真仿真训练数据，驱动下一代具身智能走遍真实世界。',
 
   // Footer
-  footer_main: '飞渡科技 © 2025 &nbsp;·&nbsp; 空间智能',
+  footer_main: '飞渡科技 © 2025 &nbsp;·&nbsp; 空间智能创新中心',
   footer_tagline: '解构 · 看见 · 理解',
 };

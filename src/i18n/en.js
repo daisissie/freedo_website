@@ -7,9 +7,9 @@ window.SITE_I18N.en = {
   brand_main: 'Spatial Intelligence Innovation Center',
   brand_suffix: '',
   nav_about: 'About',
-  nav_scenarios: 'Applications',
-  nav_vision: 'Embodied Terminals',
-  nav_contact: 'Contact',
+  nav_scenarios: 'Application',
+  nav_vision: 'Embodied Platform',
+  nav_contact: 'Contact Us',
   hero_title: 'See the World<br><span class="gradient-text-blue">Know the World</span><br><span class="gradient-text">Roam the World</span>',
   hero_subtitle: 'Freedo uses spatial intelligence to redefine embodied systems. By taking satellite imagery and drone video as input, it generates 3D scenes with physical simulation capabilities for seeing, understanding, simulation, and decision-making.',
   hero_cta_tech: 'Explore Technology',
@@ -63,7 +63,7 @@ window.SITE_I18N.en = {
   // CTA
   tag_collaborate: 'CONTACT',
   cta_heading: 'Use generated worlds<br>to train agents that <span style="color:var(--cyan)">KNOW the WORLD</span>',
-  cta_lead: 'Whether you are a drone company, robotics R&D team, defense research institute, or autonomous systems lab — Freedo\'s spatial data and simulation capabilities are the training infrastructure you truly need.',
+  cta_lead: 'Whether you are a drone company, robotics R&D team, defense research institute, or autonomous systems lab, Freedo\'s spatial data and simulation capabilities are the training infrastructure you truly need.',
   cta_btn_primary: 'ZhengRong Model',
   cta_btn_secondary: 'Learn About the Solution',
 
@@ -73,6 +73,6 @@ window.SITE_I18N.en = {
   about_body: 'We are a group of engineers and researchers deeply focused on spatial intelligence. We build full-stack technology from physical-world perception to 3D generation, providing high-fidelity simulation training data for drones, robots, and autonomous systems, and driving the next generation of embodied AI across the real world.',
 
   // Footer
-  footer_main: 'Freedo Technology © 2025 &nbsp;·&nbsp; SPATIAL INTELLIGENCE',
+  footer_main: 'Freedo Technology © 2025 &nbsp;·&nbsp; SPATIAL INTELLIGENCE INNOVATION CENTER',
   footer_tagline: 'See · Know · Roam',
 };
