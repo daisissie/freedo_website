@@ -10,7 +10,7 @@ window.SITE_I18N.en = {
   nav_scenarios: 'Applications',
   nav_vision: 'Embodied Terminals',
   nav_contact: 'Contact',
-  hero_title: 'See the World<br><span class="gradient-text-blue">Know the World</span><br><span class="gradient-text">Wonder the World</span>',
+  hero_title: 'See the World<br><span class="gradient-text-blue">Know the World</span><br><span class="gradient-text">Roam the World</span>',
   hero_subtitle: 'Freedo uses spatial intelligence to redefine embodied systems. By taking satellite imagery and drone video as input, it generates 3D scenes with physical simulation capabilities for seeing, understanding, simulation, and decision-making.',
   hero_cta_tech: 'Explore Technology',
   hero_cta_demo: 'Interactive Demo',
@@ -18,12 +18,12 @@ window.SITE_I18N.en = {
   // Narrative
   narrative_text: 'The world is a collection of <strong>space and physics</strong>.<br>Read space, understand the rules, and you can make <em>predictions and decisions</em>.<br><br><span style="font-size:clamp(18px,2.4vw,30px);font-weight:600;color:var(--white)">We use <strong>generated worlds</strong> to train agents that move through the world.</span>',
 
-  manifesto: 'Freedo world model construction,<br>embodied AI training',
+  manifesto: 'Freedo World Model:<br>Powering Embodied AI Training',
 
   // Three Words Strip
   tw1_num: '01 · SEE',   tw1_zh: 'See the World',   tw1_en: 'SPATIAL MODELING',      tw1_stat_val: 'Real-time',             tw1_stat_lbl: '3D Modeling',
   tw2_num: '02 · KNOW',  tw2_zh: 'Know the World',  tw2_en: 'SPATIAL UNDERSTANDING', tw2_stat_val: 'Precise Understanding', tw2_stat_lbl: 'Semantics',
-  tw3_num: '03 · WONDER', tw3_zh: 'Wonder the World', tw3_en: 'SPATIAL DECISION',      tw3_stat_val: 'Intelligent',           tw3_stat_lbl: 'Decision',
+  tw3_num: '03 · ROAM',   tw3_zh: 'Roam the World',   tw3_en: 'SPATIAL DECISION',      tw3_stat_val: 'Intelligent',           tw3_stat_lbl: 'Decision',
   tw_desc_1: 'High-precision digital models of the physical world — restoring material, structural, and thermal properties so machines can read reality from pixels.',
   tw_desc_2: '3D spatial perception beyond image recognition — fire spread, water levels, building structures: every detail of the world made visible.',
   tw_desc_3: 'From perception to simulation to decision-making — understanding physical laws, projecting future states, generating executable action plans.',
@@ -62,7 +62,7 @@ window.SITE_I18N.en = {
 
   // CTA
   tag_collaborate: 'CONTACT',
-  cta_heading: 'Use generated worlds<br>to train agents that <span style="color:var(--cyan)">know the world</span>',
+  cta_heading: 'Use generated worlds<br>to train agents that <span style="color:var(--cyan)">KNOW the WORLD</span>',
   cta_lead: 'Whether you are a drone company, robotics R&D team, defense research institute, or autonomous systems lab — Freedo\'s spatial data and simulation capabilities are the training infrastructure you truly need.',
   cta_btn_primary: 'ZhengRong Model',
   cta_btn_secondary: 'Learn About the Solution',
@@ -74,5 +74,5 @@ window.SITE_I18N.en = {
 
   // Footer
   footer_main: 'Freedo Technology © 2025 &nbsp;·&nbsp; SPATIAL INTELLIGENCE',
-  footer_tagline: 'Deconstruct · See · Understand',
+  footer_tagline: 'See · Know · Roam',
 };

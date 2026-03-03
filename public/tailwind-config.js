@@ -3,7 +3,7 @@ window.tailwind.config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+        sans: ['Noto Sans SC', 'sans-serif'],
       },
       colors: {
         primary: '#3B82F6',

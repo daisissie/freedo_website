@@ -18,7 +18,7 @@ window.SITE_I18N.zh = {
   // Narrative
   narrative_text: '世界是<strong>空间与物理的集合</strong>。<br>读懂空间，掌握规律，才能做出<em>预测与决策</em>。<br><br><span style="font-size:clamp(18px,2.4vw,30px);font-weight:600;color:var(--white)">我们用<strong>生成的世界</strong>，训练走遍世界的智能体。</span>',
 
-  manifesto: '飞渡世界模型构建，<br>具身智能训练',
+  manifesto: '飞渡世界模型构建<br>具身智能训练',
 
   // Three Words Strip
   tw1_num: '01 · 看见', tw1_zh: '看见世界', tw1_en: '空间建模', tw1_stat_val: '实时', tw1_stat_lbl: '3D建模',

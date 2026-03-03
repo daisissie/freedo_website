@@ -189,10 +189,11 @@ function initMobileMenu() {
 
 function initScenarioVideoHover() {
   document.querySelectorAll('.scenario-card').forEach(card => {
-    const video = card.querySelector('.sc-video');
+    const media = card.querySelector('.sc-video');
+    const isVideo = media instanceof HTMLVideoElement;
 
     card.addEventListener('mouseenter', () => {
-      if (video) video.play().catch(() => {});
+      if (isVideo) media.play().catch(() => {});
     });
 
     card.addEventListener('mousemove', (e) => {
@@ -201,16 +202,21 @@ function initScenarioVideoHover() {
       const y = (e.clientY - rect.top) / rect.height;
       const tiltX = (y - 0.5) * -8;
       const tiltY = (x - 0.5) * 8;
-      card.style.transition = 'border-color 0.3s, box-shadow 0.3s, transform 0.1s ease-out';
-      card.style.transform = `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-8px) scale(1.02)`;
+      card.style.transition = 'opacity 0.7s ease, border-color 0.3s, box-shadow 0.3s, transform 0.1s ease-out';
+      card.style.setProperty('--card-tilt-x', `${tiltX}deg`);
+      card.style.setProperty('--card-tilt-y', `${tiltY}deg`);
       card.style.setProperty('--mx', `${x * 100}%`);
       card.style.setProperty('--my', `${y * 100}%`);
     });
 
     card.addEventListener('mouseleave', () => {
-      if (video) { video.pause(); video.currentTime = 0; }
-      card.style.transition = 'border-color 0.3s, box-shadow 0.3s, transform 0.5s ease-out';
-      card.style.transform = '';
+      if (isVideo) {
+        media.pause();
+        media.currentTime = 0;
+      }
+      card.style.transition = 'opacity 0.7s ease, border-color 0.3s, box-shadow 0.3s, transform 0.5s ease-out';
+      card.style.setProperty('--card-tilt-x', '0deg');
+      card.style.setProperty('--card-tilt-y', '0deg');
     });
   });
 }

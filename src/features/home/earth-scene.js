@@ -8,7 +8,7 @@ const MAX_DISPERSE = 0.6;
 const CTA_REASSEMBLE_RATIO = 0.96;
 const MARKER_RAISE = 0.03;
 const MARKER_HIT_RADIUS = 0.07;
-const BASE_GLOBE_ROT_Y = 0;
+const BASE_GLOBE_ROT_Y = -THREE.MathUtils.degToRad(108);
 const UP_AXIS = new THREE.Vector3(0, 1, 0);
 
 const CLICKABLE_LOCATIONS = [
@@ -678,6 +678,216 @@ function buildDriftAura(count) {
   return new THREE.Points(geometry, material);
 }
 
+function getDroneOrbitPoint(drone, orbitPhase, motionTime, reducedMotion, out) {
+  const orbitalLift = Math.sin(orbitPhase * 2.15 + drone.bobPhase)
+    * (reducedMotion ? 0.002 : drone.bankLift);
+  out
+    .copy(drone.basisU)
+    .multiplyScalar(Math.cos(orbitPhase))
+    .addScaledVector(drone.basisV, Math.sin(orbitPhase))
+    .addScaledVector(drone.orbitNormal, orbitalLift)
+    .normalize();
+
+  const bob = Math.sin(motionTime * drone.altitudeSpeed + drone.bobPhase)
+    * (reducedMotion ? 0.002 : drone.cruiseBob);
+  const radius = SPHERE_RADIUS + drone.baseAltitude + bob;
+  return out.multiplyScalar(radius);
+}
+
+function buildDroneSquad(count, isMobileLike) {
+  const group = new THREE.Group();
+  const drones = [];
+  const trailPoints = isMobileLike ? 10 : 18;
+
+  const bodyGeometry = new THREE.BoxGeometry(0.056, 0.02, 0.046);
+  const canopyGeometry = new THREE.SphereGeometry(0.018, 16, 14);
+  const armXGeometry = new THREE.BoxGeometry(0.088, 0.0042, 0.012);
+  const armZGeometry = new THREE.BoxGeometry(0.012, 0.0042, 0.088);
+  const bladeXGeometry = new THREE.BoxGeometry(0.022, 0.0011, 0.004);
+  const bladeZGeometry = new THREE.BoxGeometry(0.004, 0.0011, 0.022);
+  const hubGeometry = new THREE.SphereGeometry(0.0048, 12, 10);
+  const beaconGeometry = new THREE.SphereGeometry(0.0048, 12, 10);
+
+  const bodyMaterial = new THREE.MeshBasicMaterial({
+    color: 0xe8f6ff,
+    transparent: true,
+    opacity: 0.82,
+  });
+  const canopyMaterial = new THREE.MeshBasicMaterial({
+    color: 0xb9f4ff,
+    transparent: true,
+    opacity: 0.58,
+  });
+  const armMaterial = new THREE.MeshBasicMaterial({
+    color: 0x7bd8ff,
+    transparent: true,
+    opacity: 0.52,
+  });
+  const bladeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x9ef6ff,
+    transparent: true,
+    opacity: 0.26,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const hubMaterial = new THREE.MeshBasicMaterial({
+    color: 0xbff8ff,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  });
+
+  const rotorOffsets = [
+    [0.036, 0.007, 0.036],
+    [-0.036, 0.007, 0.036],
+    [0.036, 0.007, -0.036],
+    [-0.036, 0.007, -0.036],
+  ];
+
+  for (let i = 0; i < count; i += 1) {
+    const drone = new THREE.Group();
+
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial);
+    canopy.scale.set(1.18, 0.72, 0.94);
+    canopy.position.set(0, 0.006, -0.002);
+    const armX = new THREE.Mesh(armXGeometry, armMaterial);
+    const armZ = new THREE.Mesh(armZGeometry, armMaterial);
+    drone.add(body, canopy, armX, armZ);
+
+    const beacon = new THREE.Mesh(
+      beaconGeometry,
+      new THREE.MeshBasicMaterial({
+        color: i % 2 === 0 ? 0xff9b76 : 0x7dfff6,
+        transparent: true,
+        opacity: 0.68,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+      })
+    );
+    beacon.position.set(0, 0.016, 0);
+    drone.add(beacon);
+
+    const trailColor = i % 2 === 0 ? 0xff9b76 : 0x7dfff6;
+    const trailPositions = new Float32Array(trailPoints * 3);
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailAttr = new THREE.BufferAttribute(trailPositions, 3);
+    trailGeometry.setAttribute('position', trailAttr);
+    const trail = new THREE.Line(
+      trailGeometry,
+      new THREE.LineBasicMaterial({
+        color: trailColor,
+        transparent: true,
+        opacity: 0.18,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+      })
+    );
+    trail.renderOrder = 8;
+    trail.frustumCulled = false;
+    group.add(trail);
+
+    const rotors = [];
+    for (const [x, y, z] of rotorOffsets) {
+      const rotor = new THREE.Group();
+      rotor.position.set(x, y, z);
+
+      const bladeX = new THREE.Mesh(bladeXGeometry, bladeMaterial);
+      const bladeZ = new THREE.Mesh(bladeZGeometry, bladeMaterial);
+      const hub = new THREE.Mesh(hubGeometry, hubMaterial);
+      rotor.add(bladeX, bladeZ, hub);
+      drone.add(rotor);
+      rotors.push(rotor);
+    }
+
+    const lat = THREE.MathUtils.lerp(-58, 62, Math.random());
+    const lon = Math.random() * 360 - 180;
+    const orbitNormal = latLonToVector3(lat, lon, 1).normalize();
+    const refAxis = Math.abs(orbitNormal.y) > 0.84 ? new THREE.Vector3(1, 0, 0) : UP_AXIS;
+    const basisU = new THREE.Vector3().crossVectors(refAxis, orbitNormal).normalize();
+    const basisV = new THREE.Vector3().crossVectors(orbitNormal, basisU).normalize();
+
+    drones.push({
+      root: drone,
+      beacon,
+      rotors,
+      trail,
+      trailAttr,
+      trailPositions,
+      trailPoints,
+      basisU,
+      basisV,
+      orbitNormal,
+      speed: THREE.MathUtils.lerp(0.18, 0.32, Math.random()) * (isMobileLike ? 0.85 : 1),
+      phase: (i / Math.max(1, count)) * Math.PI * 2 + Math.random() * 0.55,
+      bobPhase: Math.random() * Math.PI * 2,
+      altitudeSpeed: THREE.MathUtils.lerp(2.1, 3.6, Math.random()),
+      baseAltitude: THREE.MathUtils.lerp(0.03, 0.052, Math.random()),
+      cruiseBob: THREE.MathUtils.lerp(0.002, 0.0045, Math.random()),
+      bankLift: THREE.MathUtils.lerp(0.006, 0.016, Math.random()),
+      rotorSpeed: THREE.MathUtils.lerp(11, 19, Math.random()),
+      tmpPos: new THREE.Vector3(),
+      tmpTarget: new THREE.Vector3(),
+      tmpNext: new THREE.Vector3(),
+      tmpTrail: new THREE.Vector3(),
+    });
+
+    group.add(drone);
+  }
+
+  return { group, drones };
+}
+
+function updateDroneSquad(squad, time, reducedMotion) {
+  if (!squad) return;
+
+  const motionTime = reducedMotion ? time * 0.18 : time;
+  const rollScale = reducedMotion ? 0.015 : 0.06;
+
+  for (const drone of squad.drones) {
+    const orbitPhase = motionTime * drone.speed + drone.phase;
+    const nextPhase = orbitPhase + (reducedMotion ? 0.018 : 0.034);
+
+    getDroneOrbitPoint(drone, orbitPhase, motionTime, reducedMotion, drone.tmpPos);
+    getDroneOrbitPoint(drone, nextPhase, motionTime + 0.02, reducedMotion, drone.tmpNext);
+
+    drone.root.position.copy(drone.tmpPos);
+
+    drone.tmpTarget.copy(drone.tmpNext);
+    drone.root.lookAt(drone.tmpTarget);
+    drone.root.rotateX(THREE.MathUtils.degToRad(12));
+    drone.root.rotateZ(Math.sin(motionTime * 4.8 + drone.phase) * rollScale);
+
+    const spin = motionTime * drone.rotorSpeed;
+    for (const rotor of drone.rotors) {
+      rotor.rotation.y = spin;
+    }
+
+    const pulse = Math.sin(motionTime * 3.4 + drone.bobPhase) * 0.5 + 0.5;
+    const beaconScale = 0.9 + pulse * 0.35;
+    drone.beacon.scale.setScalar(beaconScale);
+    drone.beacon.material.opacity = 0.34 + pulse * 0.3;
+
+    for (let i = 0; i < drone.trailPoints; i += 1) {
+      const sampleOffset = i * 0.11;
+      const samplePhase = orbitPhase - sampleOffset;
+      getDroneOrbitPoint(drone, samplePhase, motionTime - i * 0.035, reducedMotion, drone.tmpTrail);
+      const idx = i * 3;
+      drone.trailPositions[idx] = drone.tmpTrail.x;
+      drone.trailPositions[idx + 1] = drone.tmpTrail.y;
+      drone.trailPositions[idx + 2] = drone.tmpTrail.z;
+    }
+
+    drone.trailAttr.needsUpdate = true;
+    drone.trail.material.opacity = reducedMotion ? 0.08 : 0.16;
+  }
+}
+
 function resolveMarkerAnchor(location, pointCloud = null) {
   const target = latLonToVector3(location.lat, location.lon, SPHERE_RADIUS).normalize();
   if (!pointCloud?.geometry) return target.clone().multiplyScalar(SPHERE_RADIUS);
@@ -903,6 +1113,7 @@ export function initEarthHero({
   scene.add(globeGroup);
   const demoPortal = ensureDemoPortal();
   let cityMarkers = null;
+  let droneSquad = null;
 
   // Start with procedural blobs, replace once GeoJSON loads
   let points = buildPointCloud(particleCount);
@@ -968,6 +1179,9 @@ export function initEarthHero({
   cityMarkers = buildCityMarkers(CLICKABLE_LOCATIONS);
   updateCityMarkerAnchors(cityMarkers, points);
   globeGroup.add(cityMarkers);
+
+  droneSquad = buildDroneSquad(6, isMobileLike);
+  globeGroup.add(droneSquad.group);
 
   // Scan ring
   const scanRing = new THREE.Mesh(
@@ -1313,6 +1527,8 @@ export function initEarthHero({
       baseRing.material.opacity = 0.09 + pulseWave * 0.03 + activeBoost * 0.05;
       stem.material.opacity = 0.18 + pulseWave * 0.035 + activeBoost * 0.06;
     }
+
+    updateDroneSquad(droneSquad, t, reducedMotion.matches);
 
     wireframe.rotation.y -= 0.0006 * (0.45 + intact * 0.55);
     latitudeLines.rotation.y += 0.0009 * (0.45 + intact * 0.55);
