@@ -1,24 +1,31 @@
-function loadLocalConfig() {
-    if (window.FAL_KEY || document.querySelector('script[data-demo-config]')) return;
+const FAL_API_BASE = '/api/fal';
 
-    const script = document.createElement('script');
-    script.src = './config.js';
-    script.dataset.demoConfig = 'true';
-    document.head.appendChild(script);
-}
+async function apiRequest(path, options = {}) {
+    const config = { ...options };
+    const headers = { ...(config.headers || {}) };
 
-function requireFalKey() {
-    loadLocalConfig();
-    const key = window.FAL_KEY || '';
-
-    if (!key) {
-        throw new Error('Missing FAL_KEY. Copy config.example.js to config.js and set window.FAL_KEY.');
+    if (config.body && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
     }
 
-    return key;
-}
+    config.headers = headers;
 
-loadLocalConfig();
+    const res = await fetch(path, config);
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    const payload = isJson ? await res.json().catch(() => null) : null;
+
+    if (!res.ok) {
+        let message = payload?.error;
+
+        if (!message && res.status === 404 && window.location.hostname === 'localhost') {
+            message = 'API routes are unavailable in Vite dev. Run this project with `vercel dev` and set FAL_KEY.';
+        }
+
+        throw new Error(message || 'Request failed (' + res.status + ')');
+    }
+
+    return payload;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    STATE MACHINE
@@ -37,16 +44,14 @@ let lastGlbUrl = null;
 
 /* ── fal.ai: upload image to get a public URL ──────────────── */
 async function uploadToFal(file) {
-    const initRes = await fetch('https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3', {
+    const init = await apiRequest(FAL_API_BASE + '/upload-initiate', {
         method: 'POST',
-        headers: { 'Authorization': `Key ${requireFalKey()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_name: file.name, content_type: file.type })
+        body: JSON.stringify({ fileName: file.name, contentType: file.type })
     });
-    if (!initRes.ok) throw new Error('Upload init failed (' + initRes.status + ')');
-    const { upload_url, file_url } = await initRes.json();
-    const putRes = await fetch(upload_url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+
+    const putRes = await fetch(init.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
     if (!putRes.ok) throw new Error('File upload failed (' + putRes.status + ')');
-    return file_url;
+    return init.fileUrl;
 }
 
 /* ── fal.ai: submit TRELLIS.2 job to queue ─────────────────── */
@@ -58,34 +63,35 @@ async function submitTrellis(imageUrl) {
     const resolution = +document.querySelector('#resolution-seg .seg-btn.active').dataset.value;
     const seed = +document.getElementById('seed-input').value || undefined;
 
-    const res = await fetch('https://queue.fal.run/fal-ai/trellis-2', {
+    const job = await apiRequest(FAL_API_BASE + '/submit', {
         method: 'POST',
-        headers: { 'Authorization': `Key ${requireFalKey()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: imageUrl, resolution, seed, decimation_target: decTarget,
-                               texture_size: texSize, ss_guidance_strength: sparseStr, remesh: true })
+        body: JSON.stringify({
+            imageUrl,
+            resolution,
+            seed,
+            decimationTarget: decTarget,
+            textureSize: texSize,
+            ssGuidanceStrength: sparseStr,
+            remesh: true
+        })
     });
-    if (!res.ok) throw new Error('Queue submit failed (' + res.status + ')');
-    const { request_id } = await res.json();
-    return request_id;
+
+    return job.requestId;
 }
 
 /* ── fal.ai: poll until done, return GLB url ───────────────── */
 async function pollTrellis(requestId) {
     for (;;) {
         await new Promise(r => setTimeout(r, 2500));
-        const res = await fetch(`https://queue.fal.run/fal-ai/trellis-2/requests/${requestId}/status`, {
-            headers: { 'Authorization': `Key ${requireFalKey()}` }
-        });
-        if (!res.ok) throw new Error('Status check failed (' + res.status + ')');
-        const data = await res.json();
-        if (data.queue_position != null) genSubstep.textContent = 'Queue position: ' + data.queue_position + '…';
+        const data = await apiRequest(FAL_API_BASE + '/status/' + encodeURIComponent(requestId));
+
+        if (data.queuePosition != null) genSubstep.textContent = 'Queue position: ' + data.queuePosition + '…';
+
         if (data.status === 'COMPLETED') {
-            const resultRes = await fetch(`https://queue.fal.run/fal-ai/trellis-2/requests/${requestId}`, {
-                headers: { 'Authorization': `Key ${requireFalKey()}` }
-            });
-            const result = await resultRes.json();
-            return result.model_glb.url;
+            const result = await apiRequest(FAL_API_BASE + '/result/' + encodeURIComponent(requestId));
+            return result.glbUrl;
         }
+
         if (data.status === 'FAILED') throw new Error(data.error || 'Generation failed');
     }
 }
