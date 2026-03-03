@@ -11,7 +11,7 @@ window.SITE_I18N.zh = {
   nav_vision: '具身终端',
   nav_contact: '合作联系',
   hero_title: '看见世界<br><span class="gradient-text-blue">认识世界</span><br><span class="gradient-text">走遍世界</span>',
-  hero_subtitle: '飞渡通过空间智能技术重新定义具身设备，实现看见，看懂，仿真，决策。',
+  hero_subtitle: '飞渡通过空间智能技术重新定义具身设备，输入卫星影像和无人机视频，成真备物理仿真能力的三维场景，实现看见，看懂，仿真，决策。',
   hero_cta_tech: '探索技术',
   hero_cta_demo: '互动演示',
 
