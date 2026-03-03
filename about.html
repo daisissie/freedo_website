@@ -5,20 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>关于我们 — 空间智能创新中心</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./tailwind-config.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./src/style.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'Noto Sans SC', 'sans-serif'] },
-                    colors: { primary: '#3B82F6' }
-                }
-            }
-        }
-    </script>
-    <script src="./src/i18n/zh.js"></script>
-    <script src="./src/i18n/en.js"></script>
+    <link rel="stylesheet" href="./src/styles/site.css">
 </head>
 <body class="antialiased bg-white">
 
@@ -94,20 +83,7 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initI18n } from './src/i18n/runtime.js';
-        initI18n();
-
-        // Navbar glass on scroll
-        const navbar = document.getElementById('navbar');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 20) {
-                navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'border-b', 'border-black/5');
-            } else {
-                navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'border-b', 'border-black/5');
-            }
-        }, { passive: true });
-    </script>
+    <script type="module" src="./src/pages/about.js"></script>
 
 </body>
 </html>

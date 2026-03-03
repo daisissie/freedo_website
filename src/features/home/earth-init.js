@@ -2,7 +2,7 @@ export async function initEarthBackground() {
   const earthVisual = document.querySelector('#earth-canvas')?.parentElement;
 
   try {
-    const { initEarthHero } = await import('./earthScene.js');
+    const { initEarthHero } = await import('./earth-scene.js');
     initEarthHero({
       heroSelector: '#earth-background',
       canvasSelector: '#earth-canvas',
