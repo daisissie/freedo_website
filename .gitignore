@@ -27,3 +27,4 @@ lerna-debug.log*
 
 # API keys — never commit
 config.js
+assets/videos/sc1.mp4
