@@ -187,6 +187,34 @@ function initMobileMenu() {
   });
 }
 
+function initScenarioVideoHover() {
+  document.querySelectorAll('.scenario-card').forEach(card => {
+    const video = card.querySelector('.sc-video');
+
+    card.addEventListener('mouseenter', () => {
+      if (video) video.play().catch(() => {});
+    });
+
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      const tiltX = (y - 0.5) * -8;
+      const tiltY = (x - 0.5) * 8;
+      card.style.transition = 'border-color 0.3s, box-shadow 0.3s, transform 0.1s ease-out';
+      card.style.transform = `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-8px) scale(1.02)`;
+      card.style.setProperty('--mx', `${x * 100}%`);
+      card.style.setProperty('--my', `${y * 100}%`);
+    });
+
+    card.addEventListener('mouseleave', () => {
+      if (video) { video.pause(); video.currentTime = 0; }
+      card.style.transition = 'border-color 0.3s, box-shadow 0.3s, transform 0.5s ease-out';
+      card.style.transform = '';
+    });
+  });
+}
+
 export function initInteractions() {
   initRevealAnimations();
   initScrollAnimations();
@@ -195,4 +223,5 @@ export function initInteractions() {
   initSmoothScroll();
   initIntroDropdown();
   initMobileMenu();
+  initScenarioVideoHover();
 }

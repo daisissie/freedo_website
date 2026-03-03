@@ -405,7 +405,21 @@ h2 {
   pointer-events: none;
 }
 
-#page-content :is(a, button, [role="button"], input, select, textarea, label, .feature-card) {
+#page-content :is(
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label,
+  .feature-card,
+  .tw-item,
+  .pipe-step,
+  .scenario-card,
+  .carrier-card,
+  .logo-marquee-set img
+) {
   pointer-events: auto;
 }
 
@@ -754,26 +768,108 @@ h2 {
 }
 
 .scenario-card {
-  background: var(--card);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.86) 100%);
   border: 1px solid rgba(0,0,0,0.09);
-  padding: 36px 30px;
+  border-radius: 16px;
+  padding: 20px;
   position: relative;
+  z-index: 0;
   overflow: hidden;
   cursor: default;
-  transition: border-color 0.3s, transform 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.5s ease-out;
   display: flex;
   flex-direction: column;
+  gap: 22px;
 }
-.scenario-card:hover { border-color: rgba(59,130,246,0.25); transform: translateY(-5px); }
+.scenarios-grid .scenario-card:hover {
+  border-color: rgba(59,130,246,0.35);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.13), 0 8px 20px rgba(0,0,0,0.08);
+  transform: translateY(-8px) scale(1.02);
+}
 .scenario-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(59,130,246,0.06) 0%, transparent 60%);
+  border-radius: 16px;
+  background: radial-gradient(circle at var(--mx, 70%) var(--my, 30%), rgba(59,130,246,0.12) 0%, transparent 55%);
   opacity: 0;
-  transition: opacity 0.4s;
+  transition: opacity 0.3s;
+  z-index: 3;
+  pointer-events: none;
 }
-.scenario-card:hover::before { opacity: 1; }
+.scenarios-grid .scenario-card:hover::before { opacity: 1; }
+
+.sc-media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.24);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.22) 0%, transparent 34%),
+    linear-gradient(135deg, rgba(5,5,5,0.78) 0%, rgba(15,23,42,0.82) 45%, rgba(30,64,175,0.7) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 18px 32px rgba(15,23,42,0.18);
+  isolation: isolate;
+}
+.sc-media::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5,5,5,0.18) 0%, rgba(5,5,5,0.42) 100%),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 100%);
+  background-size: auto, 24px 24px;
+  opacity: 0.9;
+  z-index: 2;
+  pointer-events: none;
+}
+.sc-media::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.sc-video {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0.92;
+  transform: scale(1.01);
+  filter: saturate(0.9) contrast(1.03) brightness(0.9);
+  transition: transform 0.5s ease, filter 0.5s ease, opacity 0.5s ease;
+  z-index: 1;
+}
+.scenarios-grid .scenario-card:hover .sc-video {
+  opacity: 1;
+  transform: scale(1.05);
+  filter: saturate(1.05) contrast(1.06) brightness(1);
+}
+
+.sc-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 0 8px 8px;
+}
+
+/* Placeholder gradients per scenario — visible until real video loads */
+.scenarios-grid .scenario-card:nth-child(1) .sc-media { background: linear-gradient(135deg, #450a0a 0%, #991b1b 60%, #c2410c 100%); }
+.scenarios-grid .scenario-card:nth-child(2) .sc-media { background: linear-gradient(135deg, #0c1445 0%, #1e40af 55%, #0891b2 100%); }
+.scenarios-grid .scenario-card:nth-child(3) .sc-media { background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); }
+.scenarios-grid .scenario-card:nth-child(4) .sc-media { background: linear-gradient(135deg, #052e16 0%, #166534 55%, #4d7c0f 100%); }
+.scenarios-grid .scenario-card:nth-child(5) .sc-media { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%); }
+.scenarios-grid .scenario-card:nth-child(6) .sc-media { background: linear-gradient(135deg, #2d1b69 0%, #5b21b6 55%, #be185d 100%); }
 
 .scenario-foundation {
   margin-top: 24px;
@@ -807,14 +903,14 @@ h2 {
 .scenario-foundation .sc-title { margin-bottom: 0; }
 .scenario-foundation .sc-desc  { margin-bottom: 18px; }
 
-.sc-num { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 16px; }
-.sc-icon { font-size: 38px; margin-bottom: 18px; }
+.sc-num { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: rgba(10,10,10,0.46); margin-bottom: 14px; }
+.sc-icon { font-size: 38px; margin-bottom: 16px; }
 .sc-tag {
   display: inline-block;
   padding: 3px 10px;
-  background: rgba(96,165,250,0.1);
-  border: 1px solid rgba(96,165,250,0.25);
-  color: var(--amber);
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.14);
+  color: var(--blue);
   font-size: 10px;
   letter-spacing: 0.12em;
   margin-bottom: 14px;
@@ -827,14 +923,20 @@ h2 {
   font-weight: 700;
   margin-bottom: 12px;
 }
-.sc-desc { font-size: 13px; color: var(--muted); line-height: 1.75; margin-bottom: 24px; flex: 1; }
+.sc-desc {
+  font-size: 13px;
+  color: rgba(10,10,10,0.68);
+  line-height: 1.8;
+  margin-bottom: 24px;
+  flex: 1;
+}
 .sc-features { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .sc-feat {
   font-size: 11px;
   padding: 4px 10px;
-  background: rgba(59,130,246,0.07);
-  border: 1px solid rgba(59,130,246,0.18);
-  color: var(--cyan);
+  background: rgba(255,255,255,0.76);
+  border: 1px solid rgba(59,130,246,0.14);
+  color: var(--blue);
   letter-spacing: 0.05em;
   font-family: 'Space Mono', monospace;
 }
