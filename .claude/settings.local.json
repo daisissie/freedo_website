@@ -5,7 +5,8 @@
       "WebFetch(domain:piapi.ai)",
       "WebFetch(domain:docs.fal.ai)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:daisissie.github.io)"
     ]
   }
 }
