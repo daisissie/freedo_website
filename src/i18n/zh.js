@@ -15,9 +15,6 @@ window.SITE_I18N.zh = {
   hero_cta_tech: '探索技术',
   hero_cta_demo: '互动演示',
 
-  // Narrative
-  narrative_text: '世界是<strong>空间与物理的集合</strong>。<br>读懂空间，掌握规律，才能做出<em>预测与决策</em>。<br><br><span style="font-size:clamp(18px,2.4vw,30px);font-weight:600;color:var(--white)">我们用<strong>生成的世界</strong>，训练走遍世界的智能体。</span>',
-
   manifesto: '飞渡世界模型构建<br>具身智能训练',
 
   // Three Words Strip

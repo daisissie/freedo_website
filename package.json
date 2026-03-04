@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:edgeone": "npm run build && rm -rf dist/node-functions && cp -R node-functions dist/node-functions && cp package.json dist/package.json",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -15,9 +15,6 @@ window.SITE_I18N.en = {
   hero_cta_tech: 'Explore Technology',
   hero_cta_demo: 'Interactive Demo',
 
-  // Narrative
-  narrative_text: 'The world is a collection of <strong>space and physics</strong>.<br>Read space, understand the rules, and you can make <em>predictions and decisions</em>.<br><br><span style="font-size:clamp(18px,2.4vw,30px);font-weight:600;color:var(--white)">We use <strong>generated worlds</strong> to train agents that move through the world.</span>',
-
   manifesto: 'Freedo World Model:<br>Powering Embodied AI Training',
 
   // Three Words Strip

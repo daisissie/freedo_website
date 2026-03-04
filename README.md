@@ -9,30 +9,41 @@ npm run dev
 
 默认地址：`http://localhost:5173`
 
-## Vercel / FAL 配置（demo 页面）
+## EdgeOne / FAL 配置（demo 页面）
 
-`demo.html` 的生成能力现在通过 Vercel Serverless Functions 代理到 fal.ai，浏览器端不再读取 `config.js` 中的 `FAL_KEY`。
+`demo.html` 默认调用同域 `/api/fal/*`。仓库已提供 `node-functions/api/fal/*`，可直接在 EdgeOne Pages Node Functions 运行，不依赖 Vercel。
 
-操作步骤：
+操作步骤（EdgeOne）：
 
-1. 在 Vercel 项目环境变量中添加 `FAL_KEY`
-2. 重新部署项目
-3. 前端会自动调用 `/api/fal/*` 路由，不需要用户自己输入 key
-
-本地联调（需要完整 demo 生成功能）：
-
-```bash
-cp .env.example .env.local
-# 填写 FAL_KEY
-vercel dev
-```
+1. 在 EdgeOne Pages 项目环境变量中添加 `FAL_KEY`
+2. 构建命令使用 `npm ci` + `npm run build:edgeone`，输出目录 `dist`
+3. 部署后访问 `demo.html`，前端会直接调用同域 `/api/fal/*`
 
 注意：
 
 - `npm run dev` 只启动 Vite 静态开发服务器，不会提供 `/api` 路由
-- 如果你在 `localhost` 下直接跑 `vite`，demo 生成功能会提示你改用 `vercel dev`
-- `config.js` 现在不再用于浏览器侧 fal 认证
-- 真实 `FAL_KEY` 只应该放在 Vercel / 本地服务端环境变量里
+- 如果你在 `localhost` 下只跑 `vite`，demo 生成功能会返回 404（预期行为）
+- `config.js` 不再用于浏览器侧 fal 认证
+- 真实 `FAL_KEY` 只应该放在服务端环境变量（EdgeOne 或你自建 API）
+- `npm run build:edgeone` 会把 `node-functions/` 和 `package.json` 一并放入 `dist/`，避免部署产物缺少函数导致 `/api/fal/*` 返回 404
+
+## EdgeOne 与 Vercel 分开部署（互不依赖）
+
+当前仓库支持两条独立部署路径：
+
+1. EdgeOne 独立部署（推荐）
+   - 前端：EdgeOne Pages
+   - API：同项目 `node-functions/api/fal/*`
+   - 密钥：EdgeOne 环境变量 `FAL_KEY`
+2. Vercel 独立部署（可选）
+   - API：仓库内 `api/fal/*`
+   - 密钥：Vercel 环境变量 `FAL_KEY`
+   - 与 EdgeOne 站点不做默认互相转发
+
+### 中国大陆访问注意
+
+- 若使用腾讯云中国大陆加速/服务节点，域名通常需要先完成 ICP 备案
+- 未备案时，建议先用海外加速或仅 DNS 接入，避免业务中断
 
 ## 编辑入口（最重要）
 

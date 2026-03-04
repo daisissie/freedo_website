@@ -1,4 +1,13 @@
-const FAL_API_BASE = '/api/fal';
+const DEFAULT_FAL_API_BASE = '/api/fal';
+const FAL_API_BASE = resolveFalApiBase();
+
+function resolveFalApiBase() {
+    const metaValue = document.querySelector('meta[name="fal-api-base"]')?.getAttribute('content');
+    const globalValue = window.__FAL_API_BASE__ || window.FAL_API_BASE || '';
+    const raw = (metaValue || globalValue || DEFAULT_FAL_API_BASE).trim();
+    const normalized = raw.replace(/\/+$/, '');
+    return normalized || DEFAULT_FAL_API_BASE;
+}
 
 async function apiRequest(path, options = {}) {
     const config = { ...options };
@@ -18,7 +27,7 @@ async function apiRequest(path, options = {}) {
         let message = payload?.error;
 
         if (!message && res.status === 404 && window.location.hostname === 'localhost') {
-            message = 'API routes are unavailable in Vite dev. Run this project with `vercel dev` and set FAL_KEY.';
+            message = 'API routes are unavailable in plain Vite dev. Use EdgeOne runtime with FAL_KEY, or set <meta name="fal-api-base"> to a deployed API.';
         }
 
         throw new Error(message || 'Request failed (' + res.status + ')');
