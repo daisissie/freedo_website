@@ -3,7 +3,11 @@
    POST /generate_3d  (multipart)  → { images, state }
    POST /extract_glb  (JSON state) → GLB binary
    ═══════════════════════════════════════════════════════════════ */
-const ZHENGRONG_BASE = 'http://36.170.54.6:24681';
+// On HTTPS (deployed), route through the server-side proxy to avoid mixed-content block.
+// On HTTP (local dev), call the company server directly.
+const ZHENGRONG_BASE = location.protocol === 'https:'
+  ? '/api/zhengrong'
+  : 'http://36.170.54.6:24681';
 
 /* ── Step 1: upload image, get preview images + opaque state ── */
 async function generate3d(file) {
