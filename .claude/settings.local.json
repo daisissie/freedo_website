@@ -8,7 +8,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:daisissie.github.io)",
       "Bash(ls /Users/daiyu/Documents/github_mac/freedo_website/.env*)",
-      "Bash(node --version)"
+      "Bash(node --version)",
+      "WebFetch(domain:36.170.54.6)"
     ]
   }
 }

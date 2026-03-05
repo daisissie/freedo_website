@@ -784,6 +784,30 @@
     .btn-extract.loading .btn-spin { display: block; }
     .btn-extract.loading .extract-icon { display: none; }
 
+    /* Save to Library button */
+    .btn-save-library {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 18px;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-2);
+        font-size: 12.5px;
+        font-weight: 500;
+        border: 1px solid var(--border-hi);
+        cursor: pointer;
+        transition: all 0.18s;
+        font-family: inherit;
+    }
+    .btn-save-library:hover:not(:disabled) {
+        background: rgba(59,126,255,0.08);
+        color: #7eb0ff;
+        border-color: rgba(59,126,255,0.35);
+    }
+    .btn-save-library:disabled { opacity: 0.28; cursor: not-allowed; }
+    .btn-save-library svg { width: 12px; height: 12px; }
+
     /* Generate button */
     .btn-generate {
         display: inline-flex;

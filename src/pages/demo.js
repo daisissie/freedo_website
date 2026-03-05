@@ -1,39 +1,105 @@
+/* ═══════════════════════════════════════════════════════════════
+   ZHENGRONG API  ─  http://36.170.54.6:24681
+   POST /generate_3d  (multipart)  → { images, state }
+   POST /extract_glb  (JSON state) → GLB binary
+   ═══════════════════════════════════════════════════════════════ */
+const ZHENGRONG_BASE = 'http://36.170.54.6:24681';
+
+/* ── Step 1: upload image, get preview images + opaque state ── */
+async function generate3d(file) {
+    const fd = new FormData();
+    fd.append('file', file, file.name);
+    const resp = await fetch(`${ZHENGRONG_BASE}/generate_3d`, { method: 'POST', body: fd });
+    if (!resp.ok) {
+        const msg = await resp.text().catch(() => '');
+        throw new Error(`/generate_3d failed (${resp.status})${msg ? ': ' + msg : ''}`);
+    }
+    const data = await resp.json();
+    if (!data.state) throw new Error('Server response missing "state" — cannot export GLB.');
+    return data; // { images, state }
+}
+
+/* ── Step 2: convert state → GLB blob URL ─────────────────── */
+async function extractGlbBlob(modelState) {
+    const resp = await fetch(`${ZHENGRONG_BASE}/extract_glb`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modelState)
+    });
+    if (!resp.ok) {
+        const msg = await resp.text().catch(() => '');
+        throw new Error(`/extract_glb failed (${resp.status})${msg ? ': ' + msg : ''}`);
+    }
+    const blob = await resp.blob();
+    return URL.createObjectURL(blob);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FAL.AI / TRELLIS.2 API
+   ═══════════════════════════════════════════════════════════════ */
 const DEFAULT_FAL_API_BASE = '/api/fal';
-const FAL_API_BASE = resolveFalApiBase();
 
 function resolveFalApiBase() {
     const metaValue = document.querySelector('meta[name="fal-api-base"]')?.getAttribute('content');
     const globalValue = window.__FAL_API_BASE__ || window.FAL_API_BASE || '';
     const raw = (metaValue || globalValue || DEFAULT_FAL_API_BASE).trim();
-    const normalized = raw.replace(/\/+$/, '');
-    return normalized || DEFAULT_FAL_API_BASE;
+    return raw.replace(/\/+$/, '') || DEFAULT_FAL_API_BASE;
 }
+const FAL_API_BASE = resolveFalApiBase();
 
 async function apiRequest(path, options = {}) {
     const config = { ...options };
     const headers = { ...(config.headers || {}) };
-
-    if (config.body && !headers['Content-Type']) {
-        headers['Content-Type'] = 'application/json';
-    }
-
+    if (config.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
     config.headers = headers;
-
     const res = await fetch(path, config);
     const isJson = res.headers.get('content-type')?.includes('application/json');
     const payload = isJson ? await res.json().catch(() => null) : null;
-
     if (!res.ok) {
         let message = payload?.error;
-
         if (!message && res.status === 404 && window.location.hostname === 'localhost') {
-            message = 'API routes are unavailable in plain Vite dev. Use EdgeOne runtime with FAL_KEY, or set <meta name="fal-api-base"> to a deployed API.';
+            message = 'API routes unavailable — use EdgeOne runtime with FAL_KEY, or set <meta name="fal-api-base">.';
         }
-
         throw new Error(message || 'Request failed (' + res.status + ')');
     }
-
     return payload;
+}
+
+async function uploadToFal(file) {
+    const init = await apiRequest(FAL_API_BASE + '/upload-initiate', {
+        method: 'POST',
+        body: JSON.stringify({ fileName: file.name, contentType: file.type })
+    });
+    const putRes = await fetch(init.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+    if (!putRes.ok) throw new Error('File upload failed (' + putRes.status + ')');
+    return init.fileUrl;
+}
+
+async function submitTrellis(imageUrl) {
+    const texIdx = Math.round(document.getElementById('sl-tex').value / 100 * 2);
+    const texSize = [1024, 2048, 4096][texIdx];
+    const decTarget = Math.round((document.getElementById('sl-simplify').value / 100) * 1995000 + 5000);
+    const sparseStr = +(document.getElementById('sl-sparse').value / 5).toFixed(1);
+    const resolution = +document.querySelector('#resolution-seg .seg-btn.active').dataset.value;
+    const seed = +document.getElementById('seed-input').value || undefined;
+    const job = await apiRequest(FAL_API_BASE + '/submit', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl, resolution, seed, decimationTarget: decTarget, textureSize: texSize, ssGuidanceStrength: sparseStr, remesh: true })
+    });
+    return job.requestId;
+}
+
+async function pollTrellis(requestId) {
+    for (;;) {
+        await new Promise(r => setTimeout(r, 2500));
+        const data = await apiRequest(FAL_API_BASE + '/status/' + encodeURIComponent(requestId));
+        if (data.queuePosition != null) genSubstep.textContent = 'Queue position: ' + data.queuePosition + '…';
+        if (data.status === 'COMPLETED') {
+            const result = await apiRequest(FAL_API_BASE + '/result/' + encodeURIComponent(requestId));
+            return result.glbUrl;
+        }
+        if (data.status === 'FAILED') throw new Error(data.error || 'Generation failed');
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -48,62 +114,9 @@ let meshAngle = 0;
 let meshRaf = null;
 let wireframe = false;
 
-/* ── FAL.AI CONFIG ─────────────────────────────────────────── */
-let lastGlbUrl = null;
-
-/* ── fal.ai: upload image to get a public URL ──────────────── */
-async function uploadToFal(file) {
-    const init = await apiRequest(FAL_API_BASE + '/upload-initiate', {
-        method: 'POST',
-        body: JSON.stringify({ fileName: file.name, contentType: file.type })
-    });
-
-    const putRes = await fetch(init.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-    if (!putRes.ok) throw new Error('File upload failed (' + putRes.status + ')');
-    return init.fileUrl;
-}
-
-/* ── fal.ai: submit TRELLIS.2 job to queue ─────────────────── */
-async function submitTrellis(imageUrl) {
-    const texIdx = Math.round(document.getElementById('sl-tex').value / 100 * 2);
-    const texSize = [1024, 2048, 4096][texIdx];
-    const decTarget = Math.round((document.getElementById('sl-simplify').value / 100) * 1995000 + 5000);
-    const sparseStr = +(document.getElementById('sl-sparse').value / 5).toFixed(1); // 0–50 → 0–10
-    const resolution = +document.querySelector('#resolution-seg .seg-btn.active').dataset.value;
-    const seed = +document.getElementById('seed-input').value || undefined;
-
-    const job = await apiRequest(FAL_API_BASE + '/submit', {
-        method: 'POST',
-        body: JSON.stringify({
-            imageUrl,
-            resolution,
-            seed,
-            decimationTarget: decTarget,
-            textureSize: texSize,
-            ssGuidanceStrength: sparseStr,
-            remesh: true
-        })
-    });
-
-    return job.requestId;
-}
-
-/* ── fal.ai: poll until done, return GLB url ───────────────── */
-async function pollTrellis(requestId) {
-    for (;;) {
-        await new Promise(r => setTimeout(r, 2500));
-        const data = await apiRequest(FAL_API_BASE + '/status/' + encodeURIComponent(requestId));
-
-        if (data.queuePosition != null) genSubstep.textContent = 'Queue position: ' + data.queuePosition + '…';
-
-        if (data.status === 'COMPLETED') {
-            const result = await apiRequest(FAL_API_BASE + '/result/' + encodeURIComponent(requestId));
-            return result.glbUrl;
-        }
-
-        if (data.status === 'FAILED') throw new Error(data.error || 'Generation failed');
-    }
-}
+let lastGlbUrl = null;       // GLB URL (blob for Zhengrong, fal.ai CDN URL for TRELLIS.2)
+let lastModelState = null;   // Zhengrong: opaque state from /generate_3d
+let lastModelChoice = null;  // 'zhengrong' | 'trellis' — set at generate time
 
 // DOM
 const dropzone      = document.getElementById('dropzone');
@@ -112,8 +125,9 @@ const dzPreview     = document.getElementById('dz-preview');
 const previewImg    = document.getElementById('preview-img');
 const previewFname  = document.getElementById('preview-filename');
 const dzRemove      = document.getElementById('dz-remove');
-const btnGenerate   = document.getElementById('btn-generate');
-const btnExtract    = document.getElementById('btn-extract');
+const btnGenerate    = document.getElementById('btn-generate');
+const btnExtract     = document.getElementById('btn-extract');
+const btnSaveLibrary = document.getElementById('btn-save-library');
 const statusDot     = document.getElementById('status-dot');
 const statusText    = document.getElementById('status-text');
 const stEmpty       = document.getElementById('state-empty');
@@ -209,6 +223,7 @@ function setState(s) {
     btnGenerate.classList.remove('loading');
     btnExtract.disabled = true;
     btnExtract.classList.remove('loading');
+    btnSaveLibrary.disabled = true;
     statusDot.className = 'status-dot';
     toolbar.classList.remove('visible');
 
@@ -251,6 +266,7 @@ function setState(s) {
             statusDot.classList.add('done');
             statusText.textContent = 'Mesh ready';
             btnExtract.disabled = false;
+            btnSaveLibrary.disabled = false;
             step1.classList.add('done');
             step2.classList.add('active');
             break;
@@ -280,39 +296,87 @@ const GEN_STEPS = [
     'Finalizing geometry…',
 ];
 
+/* ── Show preview images returned by /generate_3d ─────────── */
+function showPreviewImages(images) {
+    meshCanvas.style.display = 'none';
+    const old = document.getElementById('zr-previews');
+    if (old) old.remove();
+
+    const wrap = document.createElement('div');
+    wrap.id = 'zr-previews';
+    wrap.style.cssText = 'position:absolute;inset:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;padding:12px;background:rgba(0,0,0,0.6);border-radius:inherit;align-content:start;';
+
+    (images || []).forEach((b64, i) => {
+        const img = document.createElement('img');
+        img.src = (typeof b64 === 'string' && b64.startsWith('data:image')) ? b64 : `data:image/png;base64,${b64}`;
+        img.alt = 'view ' + (i + 1);
+        img.style.cssText = 'width:100%;border-radius:8px;object-fit:cover;';
+        wrap.appendChild(img);
+    });
+
+    stGenerated.appendChild(wrap);
+}
+
 btnGenerate.addEventListener('click', async () => {
     if (state !== STATE.FILE && state !== STATE.GENERATED) return;
     disposeThree();
+    lastGlbUrl = null;
+    lastModelState = null;
+    lastModelChoice = document.querySelector('#model-seg .seg-btn.active').dataset.value;
     setState(STATE.GENERATING);
     genBar.style.width = '5%'; genPct.textContent = '5%';
-    genSubstep.textContent = 'Uploading image…';
 
     try {
-        const imageUrl = await uploadToFal(selectedFile);
-        genBar.style.width = '20%'; genPct.textContent = '20%';
-        genSubstep.textContent = 'Submitting to TRELLIS.2…';
+        if (lastModelChoice === 'zhengrong') {
+            // ── Zhengrong local model ────────────────────────────
+            genSubstep.textContent = 'Uploading image to 峥嵘…';
+            let fakeProgress = 5;
+            const progressTimer = setInterval(() => {
+                if (fakeProgress < 88) { fakeProgress += Math.random() * 1.5 + 0.5; }
+                genBar.style.width = fakeProgress.toFixed(1) + '%';
+                genPct.textContent = Math.round(fakeProgress) + '%';
+            }, 1200);
 
-        const requestId = await submitTrellis(imageUrl);
-        genBar.style.width = '30%'; genPct.textContent = '30%';
-        genSubstep.textContent = 'Generating 3D mesh…';
+            const genData = await generate3d(selectedFile);
+            clearInterval(progressTimer);
+            lastModelState = genData.state;
 
-        // Animate progress bar while waiting for the model
-        let fakeProgress = 30;
-        const progressTimer = setInterval(() => {
-            if (fakeProgress < 88) { fakeProgress += Math.random() * 1.2 + 0.3; }
-            genBar.style.width = fakeProgress.toFixed(1) + '%';
-            genPct.textContent = Math.round(fakeProgress) + '%';
-        }, 1200);
+            genBar.style.width = '100%'; genPct.textContent = '100%';
+            genSubstep.textContent = 'Preview ready ✓';
+            await new Promise(r => setTimeout(r, 380));
 
-        const glbUrl = await pollTrellis(requestId);
-        clearInterval(progressTimer);
-        lastGlbUrl = glbUrl;
+            setState(STATE.GENERATED);
+            showPreviewImages(genData.images);
 
-        genBar.style.width = '100%'; genPct.textContent = '100%';
-        genSubstep.textContent = 'Complete ✓';
-        await new Promise(r => setTimeout(r, 380));
-        setState(STATE.GENERATED);
-        loadGLBIntoCanvas(glbUrl);
+        } else {
+            // ── fal.ai TRELLIS.2 ────────────────────────────────
+            genSubstep.textContent = 'Uploading image…';
+            const imageUrl = await uploadToFal(selectedFile);
+            genBar.style.width = '20%'; genPct.textContent = '20%';
+            genSubstep.textContent = 'Submitting to TRELLIS.2…';
+
+            const requestId = await submitTrellis(imageUrl);
+            genBar.style.width = '30%'; genPct.textContent = '30%';
+            genSubstep.textContent = 'Generating 3D mesh…';
+
+            let fakeProgress = 30;
+            const progressTimer = setInterval(() => {
+                if (fakeProgress < 88) { fakeProgress += Math.random() * 1.2 + 0.3; }
+                genBar.style.width = fakeProgress.toFixed(1) + '%';
+                genPct.textContent = Math.round(fakeProgress) + '%';
+            }, 1200);
+
+            const glbUrl = await pollTrellis(requestId);
+            clearInterval(progressTimer);
+            lastGlbUrl = glbUrl;
+
+            genBar.style.width = '100%'; genPct.textContent = '100%';
+            genSubstep.textContent = 'Complete ✓';
+            await new Promise(r => setTimeout(r, 380));
+
+            setState(STATE.GENERATED);
+            loadGLBIntoCanvas(glbUrl);
+        }
 
     } catch (err) {
         setState(state === STATE.GENERATING ? STATE.FILE : state);
@@ -328,30 +392,65 @@ function randomizeStats() {
     document.getElementById('hud-size').textContent = mb + ' MB';
 }
 
-/* ── Export: download real GLB ─────────────────────────────── */
+/* ── Export GLB ─────────────────────────────────────────────── */
 btnExtract.addEventListener('click', async () => {
-    if (state !== STATE.GENERATED || !lastGlbUrl) return;
+    if (state !== STATE.GENERATED) return;
     setState(STATE.EXPORTING);
+
     try {
-        const res = await fetch(lastGlbUrl);
-        if (!res.ok) throw new Error('Download failed (' + res.status + ')');
-        const blob = await res.blob();
+        let glbUrl;
+
+        if (lastModelChoice === 'zhengrong') {
+            // Call /extract_glb to get the GLB from model state
+            if (!lastModelState) throw new Error('No model state — please generate first.');
+            glbUrl = await extractGlbBlob(lastModelState);
+            lastGlbUrl = glbUrl;
+
+            // Swap preview images → Three.js canvas
+            const prev = document.getElementById('zr-previews');
+            if (prev) prev.remove();
+            meshCanvas.style.display = '';
+            loadGLBIntoCanvas(glbUrl);
+
+        } else {
+            // TRELLIS.2: GLB URL already available from generate step
+            if (!lastGlbUrl) throw new Error('No GLB URL — please generate first.');
+            glbUrl = lastGlbUrl;
+        }
+
+        // Download
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
+        a.href = glbUrl;
         a.download = 'mesh_' + Date.now() + '.glb';
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(a.href);
+        a.remove();
 
         setState(STATE.GENERATED);
         showToast('GLB downloaded ↓');
-        const verts = document.getElementById('hud-verts').textContent;
-        const ts = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-        libraryItems.unshift({ name: 'Mesh_' + ts, meta: verts + ' · GLB', glbUrl: lastGlbUrl });
-        refreshLibrary();
+        saveToLibrary();
+
     } catch (err) {
         setState(STATE.GENERATED);
         showToast('Export failed: ' + err.message);
     }
+});
+
+/* ── Save to Library ───────────────────────────────────────── */
+function saveToLibrary() {
+    if (!lastGlbUrl) return;
+    const verts = document.getElementById('hud-verts').textContent;
+    const ts = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const imgUrl = previewImg.src || '';
+    libraryItems.unshift({ name: 'Mesh_' + ts, meta: verts + ' · GLB', glbUrl: lastGlbUrl, imgUrl });
+    refreshLibrary();
+}
+
+btnSaveLibrary.addEventListener('click', () => {
+    if (state !== STATE.GENERATED || !lastGlbUrl) return;
+    saveToLibrary();
+    showToast('Saved to Library ✓');
+    switchTab('library');
 });
 
 /* ── Tab nav ───────────────────────────────────────────────── */
@@ -701,13 +800,20 @@ function refreshLibrary() {
             card.className = 'model-card';
             card.innerHTML = `
                 <div class="model-card-thumb">
-                    <div class="model-card-thumb-bg"></div>
-                    <div class="mesh-thumb"></div>
+                    ${item.imgUrl
+                        ? `<img class="explore-thumb" src="${item.imgUrl}" alt="${item.name}">`
+                        : '<div class="model-card-thumb-bg"></div><div class="mesh-thumb"></div>'}
                 </div>
                 <div class="model-card-info">
                     <div class="model-card-name">${item.name}</div>
                     <div class="model-card-meta">${item.meta}</div>
                 </div>`;
+            card.addEventListener('click', () => {
+                lastGlbUrl = item.glbUrl;
+                setState(STATE.GENERATED);
+                loadGLBIntoCanvas(item.glbUrl);
+                switchTab('create');
+            });
             grid.appendChild(card);
         });
         content.innerHTML = '';
