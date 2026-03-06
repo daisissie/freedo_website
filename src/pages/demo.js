@@ -1,40 +1,100 @@
 /* ═══════════════════════════════════════════════════════════════
    ZHENGRONG API  ─  http://36.170.54.6:24681
-   POST /generate_3d  (multipart)  → { images, state }
+   POST /generate_3d  (multipart)  → { job_id }          (async)
+   POST /job_status   (JSON)       → { status, images?, state? }
    POST /extract_glb  (JSON state) → GLB binary
    ═══════════════════════════════════════════════════════════════ */
-// On HTTPS (deployed), route through the server-side proxy to avoid mixed-content block.
-// On HTTP (local dev), call the company server directly.
+// On HTTPS (deployed), route through the EdgeOne proxy to avoid mixed-content block.
+// On HTTP (local dev), call the backend directly.
 const ZHENGRONG_BASE = location.protocol === 'https:'
   ? '/api/zhengrong'
   : 'http://36.170.54.6:24681';
 
-/* ── Step 1: upload image, get preview images + opaque state ── */
-async function generate3d(file) {
+/* ── Step 1: submit job, then poll until done ──────────────── */
+async function generate3d(file, onProgress) {
     const fd = new FormData();
     fd.append('file', file, file.name);
-    const resp = await fetch(`${ZHENGRONG_BASE}/generate_3d`, { method: 'POST', body: fd });
-    if (!resp.ok) {
-        const msg = await resp.text().catch(() => '');
-        throw new Error(`/generate_3d failed (${resp.status})${msg ? ': ' + msg : ''}`);
+    const submitResp = await fetch(`${ZHENGRONG_BASE}/generate_3d`, { method: 'POST', body: fd });
+    if (!submitResp.ok) {
+        const msg = await submitResp.text().catch(() => '');
+        throw new Error(`/generate_3d failed (${submitResp.status})${msg ? ': ' + msg : ''}`);
     }
-    const data = await resp.json();
-    if (!data.state) throw new Error('Server response missing "state" — cannot export GLB.');
-    return data; // { images, state }
+    const first = await submitResp.json();
+
+    // Old sync server: returns { state, images } directly
+    if (first.state) {
+        if (!first.state) throw new Error('Server response missing "state" — cannot export GLB.');
+        return first;
+    }
+
+    // New async server: returns { job_id }, poll /job_status
+    const { job_id } = first;
+    if (!job_id) throw new Error('Server returned neither state nor job_id.');
+
+    for (;;) {
+        await new Promise(r => setTimeout(r, 3000));
+        const pollResp = await fetch(`${ZHENGRONG_BASE}/job_status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id }),
+        });
+        if (!pollResp.ok) {
+            const msg = await pollResp.text().catch(() => '');
+            throw new Error(`/job_status failed (${pollResp.status})${msg ? ': ' + msg : ''}`);
+        }
+        const data = await pollResp.json();
+        if (data.status === 'done') {
+            if (!data.state) throw new Error('Server response missing "state" — cannot export GLB.');
+            return data; // { images, state }
+        }
+        if (data.status === 'error') {
+            throw new Error(data.error || 'Generation failed on server.');
+        }
+        // 'pending' or 'running' — keep polling
+        if (onProgress) onProgress(data.status);
+    }
 }
 
-/* ── Step 2: convert state → GLB blob URL ─────────────────── */
+/* ── Step 2: convert state → GLB blob URL (async job) ─────── */
 async function extractGlbBlob(modelState) {
-    const resp = await fetch(`${ZHENGRONG_BASE}/extract_glb`, {
+    // Submit extraction job
+    const submitResp = await fetch(`${ZHENGRONG_BASE}/extract_glb`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modelState)
     });
-    if (!resp.ok) {
-        const msg = await resp.text().catch(() => '');
-        throw new Error(`/extract_glb failed (${resp.status})${msg ? ': ' + msg : ''}`);
+    if (!submitResp.ok) {
+        const msg = await submitResp.text().catch(() => '');
+        throw new Error(`/extract_glb failed (${submitResp.status})${msg ? ': ' + msg : ''}`);
     }
-    const blob = await resp.blob();
+    const { glb_job_id } = await submitResp.json();
+    if (!glb_job_id) throw new Error('Server did not return glb_job_id');
+
+    // Poll until done
+    for (;;) {
+        await new Promise(r => setTimeout(r, 4000));
+        const pollResp = await fetch(`${ZHENGRONG_BASE}/glb_status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ glb_job_id }),
+        });
+        if (!pollResp.ok) {
+            const msg = await pollResp.text().catch(() => '');
+            throw new Error(`/glb_status failed (${pollResp.status})${msg ? ': ' + msg : ''}`);
+        }
+        const data = await pollResp.json();
+        if (data.status === 'done') break;
+        if (data.status === 'error') throw new Error(data.error || 'GLB extraction failed on server.');
+        // 'pending' or 'running' — keep polling
+    }
+
+    // Download finished GLB
+    const downloadUrl = location.protocol === 'https:'
+        ? `/api/zhengrong/download_glb?id=${encodeURIComponent(glb_job_id)}`
+        : `${ZHENGRONG_BASE}/download_glb/${encodeURIComponent(glb_job_id)}`;
+    const dlResp = await fetch(downloadUrl);
+    if (!dlResp.ok) throw new Error(`/download_glb failed (${dlResp.status})`);
+    const blob = await dlResp.blob();
     return URL.createObjectURL(blob);
 }
 
@@ -114,9 +174,6 @@ const STATE = { IDLE:'idle', FILE:'file', GENERATING:'generating', GENERATED:'ge
 let state = STATE.IDLE;
 let selectedFile = null;
 let genTimer = null;
-let meshAngle = 0;
-let meshRaf = null;
-let wireframe = false;
 
 let lastGlbUrl = null;       // GLB URL (blob for Zhengrong, fal.ai CDN URL for TRELLIS.2)
 let lastModelState = null;   // Zhengrong: opaque state from /generate_3d
@@ -143,7 +200,7 @@ const genSubstep    = document.getElementById('gen-substep');
 const step1         = document.getElementById('step-1');
 const step2         = document.getElementById('step-2');
 const toolbar       = document.getElementById('preview-toolbar');
-const meshCanvas    = document.getElementById('mesh-canvas');
+const meshViewer    = document.getElementById('mesh-viewer');
 const toast         = document.getElementById('toast');
 
 /* ── Controls ──────────────────────────────────────────────── */
@@ -300,30 +357,9 @@ const GEN_STEPS = [
     'Finalizing geometry…',
 ];
 
-/* ── Show preview images returned by /generate_3d ─────────── */
-function showPreviewImages(images) {
-    meshCanvas.style.display = 'none';
-    const old = document.getElementById('zr-previews');
-    if (old) old.remove();
-
-    const wrap = document.createElement('div');
-    wrap.id = 'zr-previews';
-    wrap.style.cssText = 'position:absolute;inset:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;padding:12px;background:rgba(0,0,0,0.6);border-radius:inherit;align-content:start;';
-
-    (images || []).forEach((b64, i) => {
-        const img = document.createElement('img');
-        img.src = (typeof b64 === 'string' && b64.startsWith('data:image')) ? b64 : `data:image/png;base64,${b64}`;
-        img.alt = 'view ' + (i + 1);
-        img.style.cssText = 'width:100%;border-radius:8px;object-fit:cover;';
-        wrap.appendChild(img);
-    });
-
-    stGenerated.appendChild(wrap);
-}
 
 btnGenerate.addEventListener('click', async () => {
     if (state !== STATE.FILE && state !== STATE.GENERATED) return;
-    disposeThree();
     lastGlbUrl = null;
     lastModelState = null;
     lastModelChoice = document.querySelector('#model-seg .seg-btn.active').dataset.value;
@@ -341,16 +377,27 @@ btnGenerate.addEventListener('click', async () => {
                 genPct.textContent = Math.round(fakeProgress) + '%';
             }, 1200);
 
-            const genData = await generate3d(selectedFile);
+            const genData = await generate3d(selectedFile, (status) => {
+                genSubstep.textContent = status === 'running' ? '峥嵘模型生成中…' : '排队等待中…';
+            });
             clearInterval(progressTimer);
             lastModelState = genData.state;
 
+            genBar.style.width = '95%'; genPct.textContent = '95%';
+            genSubstep.textContent = '导出 GLB… (需要 1-3 分钟，请耐心等待)';
+            genBar.style.transition = 'none';
+            genBar.classList.add('pulsing');
+
+            const glbUrl = await extractGlbBlob(genData.state);
+            genBar.classList.remove('pulsing');
+            lastGlbUrl = glbUrl;
+
             genBar.style.width = '100%'; genPct.textContent = '100%';
-            genSubstep.textContent = 'Preview ready ✓';
+            genSubstep.textContent = 'Complete ✓';
             await new Promise(r => setTimeout(r, 380));
 
             setState(STATE.GENERATED);
-            showPreviewImages(genData.images);
+            loadGLBIntoViewer(glbUrl);
 
         } else {
             // ── fal.ai TRELLIS.2 ────────────────────────────────
@@ -379,7 +426,7 @@ btnGenerate.addEventListener('click', async () => {
             await new Promise(r => setTimeout(r, 380));
 
             setState(STATE.GENERATED);
-            loadGLBIntoCanvas(glbUrl);
+            loadGLBIntoViewer(glbUrl);
         }
 
     } catch (err) {
@@ -405,16 +452,9 @@ btnExtract.addEventListener('click', async () => {
         let glbUrl;
 
         if (lastModelChoice === 'zhengrong') {
-            // Call /extract_glb to get the GLB from model state
-            if (!lastModelState) throw new Error('No model state — please generate first.');
-            glbUrl = await extractGlbBlob(lastModelState);
-            lastGlbUrl = glbUrl;
-
-            // Swap preview images → Three.js canvas
-            const prev = document.getElementById('zr-previews');
-            if (prev) prev.remove();
-            meshCanvas.style.display = '';
-            loadGLBIntoCanvas(glbUrl);
+            // GLB already extracted during generate — just download it
+            if (!lastGlbUrl) throw new Error('No GLB — please generate first.');
+            glbUrl = lastGlbUrl;
 
         } else {
             // TRELLIS.2: GLB URL already available from generate step
@@ -514,19 +554,15 @@ async function loadFromUrl(url, name) {
 
 /* ── Toolbar ───────────────────────────────────────────────── */
 document.getElementById('tb-wireframe').addEventListener('click', function() {
-    wireframe = !wireframe;
-    this.classList.toggle('active', wireframe);
-    document.getElementById('tb-orbit').classList.toggle('active', !wireframe);
-    if (threeCtx) {
-        threeCtx.scene.traverse(c => { if (c.isMesh) c.material.wireframe = wireframe; });
-    }
+    // model-viewer does not support wireframe; toggle button visually only
+    this.classList.toggle('active');
 });
 
 document.getElementById('tb-orbit').addEventListener('click', function() {
-    if (threeCtx) {
-        threeCtx.controls.autoRotate = !threeCtx.controls.autoRotate;
-        this.classList.toggle('active', threeCtx.controls.autoRotate);
-    }
+    const rotating = meshViewer.hasAttribute('auto-rotate');
+    if (rotating) meshViewer.removeAttribute('auto-rotate');
+    else meshViewer.setAttribute('auto-rotate', '');
+    this.classList.toggle('active', !rotating);
 });
 
 /* ── Toast ─────────────────────────────────────────────────── */
@@ -538,200 +574,12 @@ function showToast(msg) {
     toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-/* ── Three.js GLB renderer ───────────────────────────────── */
-let threeCtx = null; // { renderer, scene, camera, controls, animId, ro }
-
-function disposeThree() {
-    if (!threeCtx) return;
-    cancelAnimationFrame(threeCtx.animId);
-    threeCtx.ro.disconnect();
-    threeCtx.renderer.dispose();
-    threeCtx = null;
+/* ── model-viewer GLB renderer ───────────────────────────── */
+function loadGLBIntoViewer(url) {
+    meshViewer.src = url;
+    meshViewer.setAttribute('auto-rotate', '');
 }
 
-function loadGLBIntoCanvas(url) {
-    disposeThree();
-    const canvas = meshCanvas;
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
-
-    const scene = new THREE.Scene();
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-    sun.position.set(3, 5, 4);
-    scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x9ab8ff, 0.5);
-    fill.position.set(-4, -2, -3);
-    scene.add(fill);
-
-    const parent = stGenerated;
-    const camera = new THREE.PerspectiveCamera(40, parent.clientWidth / parent.clientHeight, 0.001, 500);
-    const controls = new THREE.OrbitControls(camera, canvas);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.07;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.7;
-
-    new THREE.GLTFLoader().load(url, gltf => {
-        // Centre and fit model
-        const box = new THREE.Box3().setFromObject(gltf.scene);
-        const centre = box.getCenter(new THREE.Vector3());
-        const size   = box.getSize(new THREE.Vector3()).length();
-        gltf.scene.position.sub(centre);
-        camera.position.set(0, size * 0.25, size * 1.6);
-        controls.target.set(0, 0, 0);
-        scene.add(gltf.scene);
-
-        // Update HUD with real counts
-        let verts = 0, tris = 0;
-        gltf.scene.traverse(c => {
-            if (c.isMesh) {
-                verts += c.geometry.attributes.position.count;
-                tris  += c.geometry.index ? c.geometry.index.count / 3
-                                          : c.geometry.attributes.position.count / 3;
-            }
-        });
-        document.getElementById('hud-verts').textContent = (verts / 1000).toFixed(1) + 'K';
-        document.getElementById('hud-faces').textContent = (tris  / 1000).toFixed(1) + 'K';
-        statusText.textContent = 'Mesh ready · ' + (verts / 1000).toFixed(1) + 'K verts';
-    }, undefined, err => showToast('GLB load error: ' + err.message));
-
-    function resize() {
-        const w = parent.clientWidth, h = parent.clientHeight;
-        renderer.setSize(w, h, false);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-    }
-    const ro = new ResizeObserver(resize);
-    ro.observe(parent);
-    resize();
-
-    function animate() {
-        threeCtx.animId = requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-    }
-    threeCtx = { renderer, scene, camera, controls, animId: null, ro };
-    animate();
-}
-
-/* ── Legacy canvas stub (kept for STATE compatibility) ───── */
-function stopMeshCanvas() {
-    if (meshRaf) { cancelAnimationFrame(meshRaf); meshRaf = null; }
-}
-
-function startMeshCanvas() {
-    stopMeshCanvas();
-    const canvas = meshCanvas;
-    const ctx = canvas.getContext('2d');
-    meshAngle = 0;
-
-    function resize() {
-        const rect = stGenerated.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width  = rect.width  * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    const ro = new ResizeObserver(resize);
-    ro.observe(stGenerated);
-    resize();
-
-    function frame() {
-        const w = canvas.width  / (window.devicePixelRatio || 1);
-        const h = canvas.height / (window.devicePixelRatio || 1);
-        ctx.clearRect(0, 0, w, h);
-
-        const cx = w / 2;
-        const cy = h / 2;
-        const R  = Math.min(w, h) * 0.30;
-
-        meshAngle += 0.006;
-
-        // Outer glow
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.8);
-        grd.addColorStop(0, 'rgba(59,126,255,0.05)');
-        grd.addColorStop(1, 'rgba(59,126,255,0)');
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, w, h);
-
-        const TILT = 0.42;
-
-        // Latitude rings
-        const LAT = 10;
-        for (let i = 0; i <= LAT; i++) {
-            const lat = (i / LAT) * Math.PI - Math.PI / 2;
-            const r   = Math.cos(lat) * R;
-            const y3  = Math.sin(lat) * R;
-            if (r < 1) continue;
-            const projY = cy + y3 * Math.cos(TILT);
-            const alpha = wireframe ? 0.22 : (0.07 + 0.12 * Math.abs(Math.cos(lat)));
-            ctx.beginPath();
-            ctx.ellipse(cx, projY, r, r * 0.38, meshAngle * 0.18, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(59,126,255,${alpha})`;
-            ctx.lineWidth = wireframe ? 0.6 : 0.55;
-            ctx.stroke();
-        }
-
-        // Longitude lines
-        const LON = 18;
-        for (let i = 0; i < LON; i++) {
-            const lon = (i / LON) * Math.PI * 2 + meshAngle;
-            const pts = [];
-            for (let j = 0; j <= 56; j++) {
-                const lat = (j / 56) * Math.PI - Math.PI / 2;
-                const x3  = Math.cos(lat) * Math.cos(lon) * R;
-                const y3  = Math.sin(lat) * R;
-                const z3  = Math.cos(lat) * Math.sin(lon) * R;
-                const py  = cy + (y3 * Math.cos(TILT) - z3 * Math.sin(TILT));
-                pts.push([cx + x3, py, z3]);
-            }
-            const front = Math.cos(lon + meshAngle * 0) > -0.15;
-            const alpha = wireframe ? (front ? 0.28 : 0.08) : (front ? 0.18 : 0.04);
-            ctx.beginPath();
-            ctx.moveTo(pts[0][0], pts[0][1]);
-            for (let j = 1; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
-            ctx.strokeStyle = `rgba(59,126,255,${alpha})`;
-            ctx.lineWidth = 0.6;
-            ctx.stroke();
-        }
-
-        // Equator accent
-        if (!wireframe) {
-            ctx.beginPath();
-            ctx.ellipse(cx, cy, R, R * 0.38, meshAngle * 0.18, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(59,126,255,0.4)';
-            ctx.lineWidth = 0.9;
-            ctx.stroke();
-        }
-
-        // Vertex dots
-        const DOT_N = 28;
-        for (let i = 0; i < DOT_N; i++) {
-            const lon2 = (i / DOT_N) * Math.PI * 2 + meshAngle;
-            const lat2 = Math.sin(i * 1.9 + 0.4) * 1.1;
-            const x3   = Math.cos(lat2) * Math.cos(lon2) * R;
-            const y3   = Math.sin(lat2) * R;
-            const z3   = Math.cos(lat2) * Math.sin(lon2) * R;
-            const py   = cy + (y3 * Math.cos(TILT) - z3 * Math.sin(TILT));
-            if (z3 < -R * 0.05) continue;
-            const intensity = (z3 / R + 1) / 2;
-            const a = wireframe ? 0.8 : (0.35 + 0.65 * intensity);
-            ctx.beginPath();
-            ctx.arc(cx + x3, py, 1.4, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(80,190,255,${a})`;
-            ctx.fill();
-        }
-
-        meshRaf = requestAnimationFrame(frame);
-    }
-
-    frame();
-}
 
 /* ── Populate Explore grid ─────────────────────────────────── */
 const EXPLORE_ITEMS = [
@@ -815,7 +663,7 @@ function refreshLibrary() {
             card.addEventListener('click', () => {
                 lastGlbUrl = item.glbUrl;
                 setState(STATE.GENERATED);
-                loadGLBIntoCanvas(item.glbUrl);
+                loadGLBIntoViewer(item.glbUrl);
                 switchTab('create');
             });
             grid.appendChild(card);

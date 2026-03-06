@@ -6,10 +6,8 @@
     <title>峥嵘大模型 — Freedo</title>
     <meta name="fal-api-base" content="/api/fal">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-    <!-- Three.js for GLB rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- model-viewer for GLB rendering -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
     <link rel="stylesheet" href="./src/styles/demo.css">
 </head>
 <body>
@@ -211,7 +209,12 @@
 
             <!-- Generated / mesh state -->
             <div class="state-panel" id="state-generated">
-                <canvas id="mesh-canvas"></canvas>
+                <model-viewer id="mesh-viewer"
+                    camera-controls
+                    auto-rotate
+                    shadow-intensity="1"
+                    style="width:100%;height:100%;background:transparent;">
+                </model-viewer>
 
                 <!-- Mesh stats HUD -->
                 <div class="mesh-hud">

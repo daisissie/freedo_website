@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import urllib.request; urllib.request.urlopen\\(''http://36.170.54.6:24681/health''\\)\")",
+      "Bash(curl -s -o /dev/null -D - -X OPTIONS http://36.170.54.6:24681/generate_3d -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: POST\")"
+    ]
+  }
+}
