@@ -2,40 +2,24 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 
-/**
- * Dev-only Vite plugin: serves node-functions/api/fal/* handlers locally
- * so `npm run dev` can exercise the full API without a separate server.
- */
-function falApiPlugin(env) {
-  const HANDLERS_ROOT = join(process.cwd(), 'node-functions/api/fal');
-
-  const routes = [
-    { re: /^\/upload-initiate$/, file: 'upload-initiate.js', params: () => ({}) },
-    { re: /^\/submit$/,          file: 'submit.js',          params: () => ({}) },
-    { re: /^\/status\/(.+)$/,   file: 'status/[requestId].js', params: m => ({ requestId: decodeURIComponent(m[1]) }) },
-    { re: /^\/result\/(.+)$/,   file: 'result/[requestId].js', params: m => ({ requestId: decodeURIComponent(m[1]) }) },
-  ];
-
-  // Cache imported handler modules for the lifetime of the dev server
+function edgeApiPlugin({ name, mountPath, handlersRoot, routes, env }) {
   const handlerCache = new Map();
 
   return {
-    name: 'fal-api-dev',
+    name,
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/api/fal', async (req, res, next) => {
-        const pathname = req.url || '/';
-        const route = routes.find(r => r.re.test(pathname));
+      server.middlewares.use(mountPath, async (req, res, next) => {
+        const requestUrl = new URL(req.url || '/', 'http://localhost');
+        const route = routes.find(r => r.re.test(requestUrl.pathname));
         if (!route) return next();
 
         try {
-          // Collect body
           const chunks = [];
           for await (const chunk of req) chunks.push(chunk);
           const bodyBuf = Buffer.concat(chunks);
 
-          // Build Web API Request
-          const webRequest = new Request(new URL(pathname, 'http://localhost'), {
+          const webRequest = new Request(requestUrl, {
             method: req.method,
             headers: Object.fromEntries(
               Object.entries(req.headers).filter(([, v]) => v != null)
@@ -45,28 +29,25 @@ function falApiPlugin(env) {
               : {}),
           });
 
-          // Build EdgeOne-style context
-          const match = pathname.match(route.re);
+          const match = requestUrl.pathname.match(route.re);
           const context = {
             request: webRequest,
             params: route.params(match),
-            env: { FAL_KEY: env.FAL_KEY || '' },
+            env,
           };
 
-          // Import handler (cached after first load)
           if (!handlerCache.has(route.file)) {
-            const url = pathToFileURL(join(HANDLERS_ROOT, route.file)).href;
+            const url = pathToFileURL(join(handlersRoot, route.file)).href;
             handlerCache.set(route.file, (await import(url)).default);
           }
           const handler = handlerCache.get(route.file);
 
-          // Run handler and pipe Web Response → Node response
           const webRes = await handler(context);
           res.statusCode = webRes.status;
           for (const [k, v] of webRes.headers.entries()) res.setHeader(k, v);
           res.end(Buffer.from(await webRes.arrayBuffer()));
         } catch (err) {
-          console.error('[fal-api]', err.message);
+          console.error(`[${name}]`, err.message);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ error: err.message }));
@@ -78,6 +59,10 @@ function falApiPlugin(env) {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), ''); // load all vars (not just VITE_ prefix)
+  const runtimeEnv = {
+    FAL_KEY: env.FAL_KEY || '',
+    ZHENGRONG_BASE: env.ZHENGRONG_BASE || '',
+  };
 
   return {
     build: {
@@ -89,6 +74,44 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    plugins: [falApiPlugin(env)],
+    plugins: [
+      edgeApiPlugin({
+        name: 'fal-api-dev',
+        mountPath: '/api/fal',
+        handlersRoot: join(process.cwd(), 'node-functions/api/fal'),
+        routes: [
+          { re: /^\/submit$/, file: 'submit.js', params: () => ({}) },
+          {
+            re: /^\/status\/(.+)$/,
+            file: 'status/[requestId].js',
+            params: m => ({ requestId: decodeURIComponent(m[1]) }),
+          },
+          {
+            re: /^\/result\/(.+)$/,
+            file: 'result/[requestId].js',
+            params: m => ({ requestId: decodeURIComponent(m[1]) }),
+          },
+          {
+            re: /^\/download\/(.+)$/,
+            file: 'download/[requestId].js',
+            params: m => ({ requestId: decodeURIComponent(m[1]) }),
+          },
+        ],
+        env: runtimeEnv,
+      }),
+      edgeApiPlugin({
+        name: 'zhengrong-api-dev',
+        mountPath: '/api/zhengrong',
+        handlersRoot: join(process.cwd(), 'node-functions/api/zhengrong'),
+        routes: [
+          { re: /^\/generate_3d$/, file: 'generate_3d.js', params: () => ({}) },
+          { re: /^\/job_status$/, file: 'job_status.js', params: () => ({}) },
+          { re: /^\/extract_glb$/, file: 'extract_glb.js', params: () => ({}) },
+          { re: /^\/glb_status$/, file: 'glb_status.js', params: () => ({}) },
+          { re: /^\/download_glb$/, file: 'download_glb.js', params: () => ({}) },
+        ],
+        env: runtimeEnv,
+      }),
+    ],
   };
 });

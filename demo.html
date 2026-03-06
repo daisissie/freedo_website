@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>峥嵘大模型 — Freedo</title>
     <meta name="fal-api-base" content="/api/fal">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-    <!-- model-viewer for GLB rendering -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <meta name="zhengrong-api-base" content="/api/zhengrong">
     <link rel="stylesheet" href="./src/styles/demo.css">
 </head>
 <body>
@@ -132,14 +130,6 @@
 
             <div class="slider-row">
                 <div class="slider-hdr">
-                    <span class="slider-lbl">Foreground Ratio</span>
-                    <span class="slider-val" id="val-fg">0.85</span>
-                </div>
-                <input type="range" id="sl-fg" min="50" max="100" value="85" step="1">
-            </div>
-
-            <div class="slider-row">
-                <div class="slider-hdr">
                     <span class="slider-lbl">Decimation Target</span>
                     <span class="slider-val" id="val-simplify">0.95</span>
                 </div>
@@ -219,20 +209,20 @@
                 <!-- Mesh stats HUD -->
                 <div class="mesh-hud">
                     <div class="mesh-stat">
-                        <span class="mesh-stat-val" id="hud-verts">24.3K</span>
-                        <span class="mesh-stat-lbl">Vertices</span>
+                        <span class="mesh-stat-val" id="hud-provider">峥嵘 Local</span>
+                        <span class="mesh-stat-lbl">Provider</span>
                     </div>
                     <div class="mesh-stat">
-                        <span class="mesh-stat-val" id="hud-faces">48.6K</span>
-                        <span class="mesh-stat-lbl">Faces</span>
+                        <span class="mesh-stat-val" id="hud-resolution">1024</span>
+                        <span class="mesh-stat-lbl">Resolution</span>
                     </div>
                     <div class="mesh-stat">
-                        <span class="mesh-stat-val" id="hud-tex">1024 px</span>
+                        <span class="mesh-stat-val" id="hud-tex">2048 px</span>
                         <span class="mesh-stat-lbl">Texture</span>
                     </div>
                     <div class="mesh-stat">
-                        <span class="mesh-stat-val" id="hud-size">2.4 MB</span>
-                        <span class="mesh-stat-lbl">Est. size</span>
+                        <span class="mesh-stat-val" id="hud-seed">42</span>
+                        <span class="mesh-stat-lbl">Seed</span>
                     </div>
                 </div>
             </div>
@@ -245,16 +235,6 @@
                         <path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>
                     </svg>
                 </button>
-                <button class="tb-btn" id="tb-wireframe" title="Wireframe">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 7.5l-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
-                    </svg>
-                </button>
-                <button class="tb-btn" id="tb-zoom" title="Reset view">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
-                    </svg>
-                </button>
             </div>
 
         </div>
@@ -264,15 +244,6 @@
 <!-- ═══ EXPLORE PANEL ════════════════════════════════════════════ -->
 <div id="panel-explore" class="tab-panel">
     <div class="tab-inner">
-        <!-- Search -->
-        <div class="search-bar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-            </svg>
-            <input type="text" placeholder="Search prompts, objects, scenes…">
-            <kbd>⌘K</kbd>
-        </div>
-
         <!-- Filters -->
         <div class="filter-strip">
             <button class="filter-tag active">All</button>
@@ -309,7 +280,7 @@
         <div class="status-dot" id="status-dot"></div>
         <span class="status-text" id="status-text">No image selected</span>
     </div>
-    <div class="action-sync">同步至飞渡DTS底座</div>
+    <div class="action-sync">EdgeOne same-origin routing</div>
     <div class="action-btns">
         <button class="btn-extract" id="btn-extract" disabled>
             <span class="extract-icon">

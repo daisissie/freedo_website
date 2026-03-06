@@ -9,40 +9,66 @@ npm run dev
 
 默认地址：`http://localhost:5173`
 
-## EdgeOne / FAL 配置（demo 页面）
+## Demo API 路由
 
-`demo.html` 默认调用同域 `/api/fal/*`。仓库已提供 `node-functions/api/fal/*`，可直接在 EdgeOne Pages Node Functions 运行，不依赖 Vercel。
+`demo.html` 现在只调用同域 API：
+
+- 峥嵘 Local：`/api/zhengrong/*`
+- Model 2 / FAL：`/api/fal/*`
+
+浏览器不会再直接访问 `36.170.54.6`、`rest.fal.ai`、`queue.fal.run` 或 fal 的 GLB 下载地址。上传、轮询、下载全部走 EdgeOne Node Functions。
+
+## EdgeOne 配置（demo 页面）
+
+仓库已提供 `node-functions/api/zhengrong/*` 和 `node-functions/api/fal/*`，可直接在 EdgeOne Pages Node Functions 运行。
 
 操作步骤（EdgeOne）：
 
 1. 在 EdgeOne Pages 项目环境变量中添加 `FAL_KEY`
-2. 构建命令使用 `npm ci` + `npm run build:edgeone`，输出目录 `dist`
-3. 部署后访问 `demo.html`，前端会直接调用同域 `/api/fal/*`
+2. 如需覆盖默认峥嵘后端地址，添加 `ZHENGRONG_BASE`
+3. 构建命令使用 `npm ci` + `npm run build:edgeone`，输出目录 `dist`
+4. 部署后访问 `demo.html`，前端会调用同域 `/api/zhengrong/*` 和 `/api/fal/*`
 
-注意：
+默认 `ZHENGRONG_BASE`：
 
-- `npm run dev` 只启动 Vite 静态开发服务器，不会提供 `/api` 路由
-- 如果你在 `localhost` 下只跑 `vite`，demo 生成功能会返回 404（预期行为）
-- `config.js` 不再用于浏览器侧 fal 认证
+```text
+http://36.170.54.6:24681
+```
+
+## 本地开发注意
+
+- `npm run dev` 会在本地挂载 `/api/zhengrong/*` 和 `/api/fal/*`
+- 不要再用 `Live Server` 直接打开 `demo.html`；那样不会运行 Node Functions
 - 真实 `FAL_KEY` 只应该放在服务端环境变量（EdgeOne 或你自建 API）
-- `npm run build:edgeone` 会把 `node-functions/` 和 `package.json` 一并放入 `dist/`，避免部署产物缺少函数导致 `/api/fal/*` 返回 404
+- `npm run build:edgeone` 会把 `node-functions/` 和 `package.json` 一并放入 `dist/`
 
-## EdgeOne 与 Vercel 分开部署（互不依赖）
+## Smoke Test
 
-当前仓库支持两条独立部署路径：
+快速检查路由挂载：
 
-1. EdgeOne 独立部署（推荐）
-   - 前端：EdgeOne Pages
-   - API：同项目 `node-functions/api/fal/*`
-   - 密钥：EdgeOne 环境变量 `FAL_KEY`
-2. Vercel 独立部署（可选）
-   - API：仓库内 `api/fal/*`
-   - 密钥：Vercel 环境变量 `FAL_KEY`
-   - 与 EdgeOne 站点不做默认互相转发
+```bash
+npm run dev
+npm run smoke:demo
+```
+
+对本地或 EdgeOne 做完整生成/下载检查：
+
+```bash
+npm run smoke:demo -- --base https://your-domain.com --mode full --image /absolute/path/to/object.png
+```
+
+可选参数：
+
+- `--base`：默认 `http://127.0.0.1:5173`
+- `--mode`：`quick` 或 `full`
+- `--provider`：`both`、`zhengrong`、`fal`
+- `--image`：`full` 模式必填，建议使用单物体、背景干净的图片
+- `--timeout`：总超时秒数，默认 `180`
 
 ### 中国大陆访问注意
 
 - 若使用腾讯云中国大陆加速/服务节点，域名通常需要先完成 ICP 备案
+- demo 页已移除 Google Fonts、`jsdelivr` model-viewer、`picsum` 示例图这类浏览器侧外链依赖
 - 未备案时，建议先用海外加速或仅 DNS 接入，避免业务中断
 
 ## 编辑入口（最重要）

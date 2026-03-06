@@ -1,33 +1,33 @@
-const ZHENGRONG_BASE = 'http://36.170.54.6:24681';
+import {
+  allowMethods,
+  handleApiError,
+  proxyZhengrong,
+  relayJson,
+} from '../../_lib/zhengrong.js';
 
 export default async function onRequest(context) {
-  if (context.request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json', Allow: 'POST' },
-    });
-  }
+  const methodNotAllowed = allowMethods(context.request, ['POST']);
+  if (methodNotAllowed) return methodNotAllowed;
 
   try {
-    // Pass raw body and Content-Type (including multipart boundary) straight through
-    const contentType = context.request.headers.get('content-type') || '';
-    const body = await context.request.arrayBuffer();
+    const incomingForm = await context.request.formData();
+    const upstreamForm = new FormData();
 
-    const resp = await fetch(`${ZHENGRONG_BASE}/generate_3d`, {
+    for (const [key, value] of incomingForm.entries()) {
+      if (value instanceof File) {
+        upstreamForm.append(key, value, value.name);
+      } else {
+        upstreamForm.append(key, String(value));
+      }
+    }
+
+    const resp = await proxyZhengrong(context, '/generate_3d', {
       method: 'POST',
-      headers: { 'Content-Type': contentType },
-      body,
+      body: upstreamForm,
     });
 
-    const text = await resp.text();
-    return new Response(text, {
-      status: resp.status,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
+    return relayJson(resp);
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || 'Unexpected error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error);
   }
 }

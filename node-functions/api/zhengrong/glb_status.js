@@ -1,31 +1,24 @@
-const ZHENGRONG_BASE = 'http://36.170.54.6:24681';
+import {
+  allowMethods,
+  handleApiError,
+  proxyZhengrong,
+  relayJson,
+} from '../../_lib/zhengrong.js';
 
 export default async function onRequest(context) {
-  if (context.request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json', Allow: 'POST' },
-    });
-  }
+  const methodNotAllowed = allowMethods(context.request, ['POST']);
+  if (methodNotAllowed) return methodNotAllowed;
 
   try {
     const body = await context.request.text();
-
-    const resp = await fetch(`${ZHENGRONG_BASE}/glb_status`, {
+    const resp = await proxyZhengrong(context, '/glb_status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
     });
 
-    const text = await resp.text();
-    return new Response(text, {
-      status: resp.status,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
+    return relayJson(resp);
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || 'Unexpected error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return handleApiError(error);
   }
 }

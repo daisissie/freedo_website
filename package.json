@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "build:edgeone": "npm run build && rm -rf dist/node-functions && cp -R node-functions dist/node-functions && cp package.json dist/package.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "smoke:demo": "node scripts/smoke-demo.mjs"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.1.0",
     "three": "^0.181.1"
   },
   "devDependencies": {

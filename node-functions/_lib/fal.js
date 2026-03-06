@@ -1,6 +1,7 @@
 const FAL_MODEL_ID = 'fal-ai/trellis-2';
 const FAL_QUEUE_BASE = `https://queue.fal.run/${FAL_MODEL_ID}`;
 const FAL_UPLOAD_URL = 'https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3';
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 function jsonHeaders() {
   return {
@@ -16,6 +17,28 @@ function createHttpError(status, message, details) {
     error.details = details;
   }
   return error;
+}
+
+function normalizeFalErrorMessage(candidate) {
+  if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+
+  if (Array.isArray(candidate)) {
+    const nested = candidate
+      .map(item => normalizeFalErrorMessage(item))
+      .find(Boolean);
+    if (nested) return nested;
+  }
+
+  if (candidate && typeof candidate === 'object') {
+    return (
+      normalizeFalErrorMessage(candidate.message) ||
+      normalizeFalErrorMessage(candidate.msg) ||
+      normalizeFalErrorMessage(candidate.error) ||
+      normalizeFalErrorMessage(candidate.detail)
+    );
+  }
+
+  return '';
 }
 
 function readFalKey(context) {
@@ -85,34 +108,55 @@ export function getRequestId(context) {
 }
 
 async function falJsonRequest(context, url, options, fallbackMessage) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options?.headers || {}),
-      Authorization: `Key ${readFalKey(context)}`,
-    },
-  });
+  let lastError;
 
-  const text = await response.text();
-  let payload = {};
-
-  if (text) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = { raw: text };
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...(options?.headers || {}),
+          Authorization: `Key ${readFalKey(context)}`,
+        },
+      });
+
+      const text = await response.text();
+      let payload = {};
+
+      if (text) {
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          payload = { raw: text };
+        }
+      }
+
+      if (!response.ok) {
+        const message =
+          normalizeFalErrorMessage(payload?.detail) ||
+          normalizeFalErrorMessage(payload?.error) ||
+          normalizeFalErrorMessage(payload?.message) ||
+          `${fallbackMessage} (${response.status})`;
+
+        if (attempt < 2 && RETRYABLE_STATUS_CODES.has(response.status)) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+          continue;
+        }
+
+        throw createHttpError(response.status, message, payload);
+      }
+
+      return payload;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= 2 || Number.isInteger(error?.status)) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
     }
   }
 
-  if (!response.ok) {
-    throw createHttpError(
-      response.status,
-      payload.detail || payload.error || payload.message || `${fallbackMessage} (${response.status})`,
-      payload
-    );
-  }
-
-  return payload;
+  throw lastError || createHttpError(500, fallbackMessage);
 }
 
 export async function createUploadSession(context, { fileName, contentType }) {
@@ -129,6 +173,31 @@ export async function createUploadSession(context, { fileName, contentType }) {
     },
     'Upload init failed'
   );
+}
+
+export async function uploadFileToFal(context, file) {
+  const fileName = requireNonEmptyString(file?.name || '', 'file');
+  const contentType = requireNonEmptyString(
+    file?.type || 'application/octet-stream',
+    'contentType'
+  );
+
+  const upload = await createUploadSession(context, { fileName, contentType });
+  const uploadResponse = await fetch(upload.upload_url, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: await file.arrayBuffer(),
+  });
+
+  if (!uploadResponse.ok) {
+    const detail = await uploadResponse.text().catch(() => '');
+    throw createHttpError(
+      uploadResponse.status,
+      detail || `File upload failed (${uploadResponse.status}).`
+    );
+  }
+
+  return upload.file_url;
 }
 
 export async function submitTrellisJob(context, payload) {
@@ -160,6 +229,36 @@ export async function fetchTrellisResult(context, requestId) {
     { method: 'GET' },
     'Result fetch failed'
   );
+}
+
+export async function resolveTrellisGlbUrl(context, requestId) {
+  const result = await fetchTrellisResult(context, requestId);
+  const glbUrl = result?.model_glb?.url;
+
+  if (!glbUrl) {
+    throw createHttpError(502, 'fal response did not include model_glb.url.', result);
+  }
+
+  return glbUrl;
+}
+
+export async function downloadTrellisGlb(context, requestId) {
+  const glbUrl = await resolveTrellisGlbUrl(context, requestId);
+  const response = await fetch(glbUrl);
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw createHttpError(
+      response.status,
+      detail || `GLB download failed (${response.status}).`
+    );
+  }
+
+  return {
+    bytes: await response.arrayBuffer(),
+    contentType: response.headers.get('content-type') || 'model/gltf-binary',
+    contentLength: response.headers.get('content-length') || '',
+  };
 }
 
 export function handleApiError(error) {

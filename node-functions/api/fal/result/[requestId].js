@@ -1,8 +1,8 @@
 import {
   allowMethods,
-  fetchTrellisResult,
   getRequestId,
   handleApiError,
+  resolveTrellisGlbUrl,
   sendJson,
 } from '../../../_lib/fal.js';
 
@@ -12,17 +12,9 @@ export default async function onRequest(context) {
 
   try {
     const requestId = getRequestId(context);
-    const result = await fetchTrellisResult(context, requestId);
-    const glbUrl = result?.model_glb?.url;
+    await resolveTrellisGlbUrl(context, requestId);
 
-    if (!glbUrl) {
-      const error = new Error('fal response did not include model_glb.url.');
-      error.status = 502;
-      error.details = result;
-      throw error;
-    }
-
-    return sendJson({ glbUrl }, 200);
+    return sendJson({ downloadUrl: `/api/fal/download/${encodeURIComponent(requestId)}` }, 200);
   } catch (error) {
     return handleApiError(error);
   }
