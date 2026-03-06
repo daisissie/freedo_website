@@ -1,0 +1,25 @@
+{
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/fal/status/:requestId",
+      "destination": "/api/fal/status?requestId=:requestId"
+    },
+    {
+      "source": "/api/fal/result/:requestId",
+      "destination": "/api/fal/result?requestId=:requestId"
+    },
+    {
+      "source": "/api/fal/download/:requestId",
+      "destination": "/api/fal/download?requestId=:requestId"
+    }
+  ]
+}

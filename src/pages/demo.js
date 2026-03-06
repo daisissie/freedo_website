@@ -41,6 +41,10 @@ const FAL_API_BASE = resolveApiBase(
 );
 
 async function readResponseMessage(response, payload = null) {
+  if (response.status === 413) {
+    return 'Upload too large for the current server configuration.';
+  }
+
   if (payload?.error) return payload.error;
   const contentType = response.headers.get('content-type') || '';
 
@@ -338,11 +342,6 @@ dzRemove.addEventListener('click', event => {
 function loadFile(file) {
   if (!file.type.match(/image\/(png|jpeg|webp)/)) {
     showToast('Unsupported format — use PNG, JPG or WEBP.');
-    return;
-  }
-
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('File too large — max 10 MB.');
     return;
   }
 
