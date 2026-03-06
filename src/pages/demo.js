@@ -1,11 +1,11 @@
-import '@google/model-viewer';
+import '../../node_modules/@google/model-viewer/dist/model-viewer.min.js';
 
-import sc1Url from '../../assets/sc1.png';
-import sc2Url from '../../assets/sc2.png';
-import sc3Url from '../../assets/sc3.png';
-import sc4Url from '../../assets/sc4.png';
-import sc5Url from '../../assets/sc5.png';
-import sc6Url from '../../assets/sc6.png';
+const sc1Url = new URL('../../assets/sc1.png', import.meta.url).href;
+const sc2Url = new URL('../../assets/sc2.png', import.meta.url).href;
+const sc3Url = new URL('../../assets/sc3.png', import.meta.url).href;
+const sc4Url = new URL('../../assets/sc4.png', import.meta.url).href;
+const sc5Url = new URL('../../assets/sc5.png', import.meta.url).href;
+const sc6Url = new URL('../../assets/sc6.png', import.meta.url).href;
 
 const MODEL_LABELS = {
   zhengrong: '峥嵘 Local',
@@ -72,7 +72,7 @@ async function apiRequest(path, options = {}) {
     let message = await readResponseMessage(response, payload);
 
     if (!message && response.status === 404 && LOCAL_HOSTNAMES.has(window.location.hostname)) {
-      message = 'Local API routes unavailable. Run `npm run dev` or deploy to EdgeOne.';
+      message = 'Local API routes unavailable. Run `npm run dev` so /api/zhengrong and /api/fal are mounted.';
     }
 
     throw new Error(message || `Request failed (${response.status})`);
@@ -313,11 +313,6 @@ document.getElementById('btn-random-seed').addEventListener('click', () => {
   }
 });
 
-dropzone.addEventListener('click', event => {
-  if (event.target.closest('.dz-remove')) return;
-  fileInput.click();
-});
-
 fileInput.addEventListener('change', event => {
   if (event.target.files[0]) loadFile(event.target.files[0]);
 });
@@ -481,7 +476,7 @@ btnGenerate.addEventListener('click', async () => {
 
       lastGlbUrl = await extractZhengrongGlbBlob(generated.state);
     } else {
-      genSubstep.textContent = 'Uploading image via EdgeOne…';
+      genSubstep.textContent = 'Uploading image to Model 2…';
       genBar.style.width = '20%';
       genPct.textContent = '20%';
 

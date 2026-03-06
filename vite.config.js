@@ -22,7 +22,7 @@ function edgeApiPlugin({ name, mountPath, handlersRoot, routes, env }) {
           const webRequest = new Request(requestUrl, {
             method: req.method,
             headers: Object.fromEntries(
-              Object.entries(req.headers).filter(([, v]) => v != null)
+              Object.entries(req.headers).filter(([, value]) => value != null)
             ),
             ...(bodyBuf.length > 0 && req.method !== 'GET' && req.method !== 'HEAD'
               ? { body: bodyBuf }
@@ -44,13 +44,13 @@ function edgeApiPlugin({ name, mountPath, handlersRoot, routes, env }) {
 
           const webRes = await handler(context);
           res.statusCode = webRes.status;
-          for (const [k, v] of webRes.headers.entries()) res.setHeader(k, v);
+          for (const [key, value] of webRes.headers.entries()) res.setHeader(key, value);
           res.end(Buffer.from(await webRes.arrayBuffer()));
-        } catch (err) {
-          console.error(`[${name}]`, err.message);
+        } catch (error) {
+          console.error(`[${name}]`, error.message);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: err.message }));
+          res.end(JSON.stringify({ error: error.message }));
         }
       });
     },
@@ -58,7 +58,7 @@ function edgeApiPlugin({ name, mountPath, handlersRoot, routes, env }) {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), ''); // load all vars (not just VITE_ prefix)
+  const env = loadEnv(mode, process.cwd(), '');
   const runtimeEnv = {
     FAL_KEY: env.FAL_KEY || '',
     ZHENGRONG_BASE: env.ZHENGRONG_BASE || '',
@@ -85,17 +85,17 @@ export default defineConfig(({ mode }) => {
           {
             re: /^\/status\/(.+)$/,
             file: 'status/[requestId].js',
-            params: m => ({ requestId: decodeURIComponent(m[1]) }),
+            params: match => ({ requestId: decodeURIComponent(match[1]) }),
           },
           {
             re: /^\/result\/(.+)$/,
             file: 'result/[requestId].js',
-            params: m => ({ requestId: decodeURIComponent(m[1]) }),
+            params: match => ({ requestId: decodeURIComponent(match[1]) }),
           },
           {
             re: /^\/download\/(.+)$/,
             file: 'download/[requestId].js',
-            params: m => ({ requestId: decodeURIComponent(m[1]) }),
+            params: match => ({ requestId: decodeURIComponent(match[1]) }),
           },
         ],
         env: runtimeEnv,

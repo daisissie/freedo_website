@@ -11,12 +11,12 @@ npm run dev
 
 ## Demo API 路由
 
-`demo.html` 现在只调用同域 API：
+`demo.html` 现在是双模型 2D 转 3D 入口，只调用同域 API：
 
 - 峥嵘 Local：`/api/zhengrong/*`
-- Model 2 / FAL：`/api/fal/*`
+- Fal API：`/api/fal/*`
 
-浏览器不会再直接访问 `36.170.54.6`、`rest.fal.ai`、`queue.fal.run` 或 fal 的 GLB 下载地址。上传、轮询、下载全部走 EdgeOne Node Functions。
+浏览器不会直接访问 `36.170.54.6`、`rest.fal.ai`、`queue.fal.run` 或 fal 的 GLB 下载地址。上传、轮询、下载统一走本地 Vite dev proxy 或 EdgeOne Node Functions。
 
 ## EdgeOne 配置（demo 页面）
 

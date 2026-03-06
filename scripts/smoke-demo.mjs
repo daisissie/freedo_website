@@ -112,11 +112,10 @@ async function getErrorMessage(response) {
 }
 
 async function request(url, init = {}, timeoutMs = 30000) {
-  const response = await fetch(url, {
+  return fetch(url, {
     ...init,
     signal: AbortSignal.timeout(timeoutMs),
   });
-  return response;
 }
 
 function expect(condition, message) {

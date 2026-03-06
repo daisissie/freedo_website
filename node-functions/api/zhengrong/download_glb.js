@@ -15,7 +15,10 @@ export default async function onRequest(context) {
     if (!glb_job_id) {
       return new Response(JSON.stringify({ error: 'Missing id parameter' }), {
         status: 400,
-        headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' },
+        headers: {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'application/json; charset=utf-8',
+        },
       });
     }
 

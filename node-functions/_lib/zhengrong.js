@@ -21,7 +21,8 @@ export function allowMethods(request, methods) {
 }
 
 export function readZhengrongBase(context) {
-  const raw = context?.env?.ZHENGRONG_BASE || process.env.ZHENGRONG_BASE || DEFAULT_ZHENGRONG_BASE;
+  const raw =
+    context?.env?.ZHENGRONG_BASE || process.env.ZHENGRONG_BASE || DEFAULT_ZHENGRONG_BASE;
   return String(raw).trim().replace(/\/+$/, '') || DEFAULT_ZHENGRONG_BASE;
 }
 
