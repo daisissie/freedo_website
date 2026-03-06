@@ -9,24 +9,19 @@ export default async function onRequest(context) {
   }
 
   try {
-    const formData = await context.request.formData();
+    // Pass raw body and Content-Type (including multipart boundary) straight through
+    const contentType = context.request.headers.get('content-type') || '';
+    const body = await context.request.arrayBuffer();
 
     const resp = await fetch(`${ZHENGRONG_BASE}/generate_3d`, {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': contentType },
+      body,
     });
 
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => '');
-      return new Response(JSON.stringify({ error: text || `Upstream error ${resp.status}` }), {
-        status: resp.status,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const data = await resp.json();
-    return new Response(JSON.stringify(data), {
-      status: 200,
+    const text = await resp.text();
+    return new Response(text, {
+      status: resp.status,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
   } catch (error) {
